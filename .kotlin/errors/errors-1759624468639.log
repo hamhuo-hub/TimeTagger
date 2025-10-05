@@ -1,0 +1,294 @@
+kotlin version: 2.0.21
+error message: org.jetbrains.kotlin.backend.common.BackendException: Backend Internal error: Exception during IR lowering
+File being compiled: /home/zihang/AndroidStudioProjects/timetagger/app/src/main/java/massey/hamhuo/timetagger/presentation/MainActivity.kt
+The root cause java.lang.RuntimeException was thrown at: org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:47)
+	at org.jetbrains.kotlin.backend.common.CodegenUtil.reportBackendException(CodegenUtil.kt:253)
+	at org.jetbrains.kotlin.backend.common.CodegenUtil.reportBackendException$default(CodegenUtil.kt:236)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invokeSequential(performByIrFile.kt:65)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invoke(performByIrFile.kt:52)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invoke(performByIrFile.kt:38)
+	at org.jetbrains.kotlin.backend.common.phaser.NamedCompilerPhase.phaseBody(CompilerPhase.kt:166)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+	at org.jetbrains.kotlin.backend.common.phaser.CompositePhase.invoke(PhaseBuilders.kt:27)
+	at org.jetbrains.kotlin.backend.common.phaser.CompositePhase.invoke(PhaseBuilders.kt:14)
+	at org.jetbrains.kotlin.backend.common.phaser.NamedCompilerPhase.phaseBody(CompilerPhase.kt:166)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+	at org.jetbrains.kotlin.backend.common.phaser.CompilerPhaseKt.invokeToplevel(CompilerPhase.kt:62)
+	at org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory.invokeCodegen(JvmIrCodegenFactory.kt:371)
+	at org.jetbrains.kotlin.codegen.CodegenFactory.generateModule(CodegenFactory.kt:47)
+	at org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory.generateModuleInFrontendIRMode(JvmIrCodegenFactory.kt:433)
+	at org.jetbrains.kotlin.cli.jvm.compiler.pipeline.JvmCompilerPipelineKt.generateCodeFromIr(jvmCompilerPipeline.kt:246)
+	at org.jetbrains.kotlin.cli.jvm.compiler.pipeline.JvmCompilerPipelineKt.compileModulesUsingFrontendIrAndLightTree(jvmCompilerPipeline.kt:142)
+	at org.jetbrains.kotlin.cli.jvm.K2JVMCompiler.doExecute(K2JVMCompiler.kt:148)
+	at org.jetbrains.kotlin.cli.jvm.K2JVMCompiler.doExecute(K2JVMCompiler.kt:43)
+	at org.jetbrains.kotlin.cli.common.CLICompiler.execImpl(CLICompiler.kt:103)
+	at org.jetbrains.kotlin.cli.common.CLICompiler.execImpl(CLICompiler.kt:49)
+	at org.jetbrains.kotlin.cli.common.CLITool.exec(CLITool.kt:101)
+	at org.jetbrains.kotlin.incremental.IncrementalJvmCompilerRunner.runCompiler(IncrementalJvmCompilerRunner.kt:464)
+	at org.jetbrains.kotlin.incremental.IncrementalJvmCompilerRunner.runCompiler(IncrementalJvmCompilerRunner.kt:73)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.doCompile(IncrementalCompilerRunner.kt:506)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compileImpl(IncrementalCompilerRunner.kt:423)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compileNonIncrementally(IncrementalCompilerRunner.kt:301)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compile(IncrementalCompilerRunner.kt:129)
+	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.execIncrementalCompiler(CompileServiceImpl.kt:675)
+	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.access$execIncrementalCompiler(CompileServiceImpl.kt:92)
+	at org.jetbrains.kotlin.daemon.CompileServiceImpl.compile(CompileServiceImpl.kt:1660)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(Unknown Source)
+	at java.base/java.lang.reflect.Method.invoke(Unknown Source)
+	at java.rmi/sun.rmi.server.UnicastServerRef.dispatch(Unknown Source)
+	at java.rmi/sun.rmi.transport.Transport$1.run(Unknown Source)
+	at java.rmi/sun.rmi.transport.Transport$1.run(Unknown Source)
+	at java.base/java.security.AccessController.doPrivileged(Unknown Source)
+	at java.rmi/sun.rmi.transport.Transport.serviceCall(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport.handleMessages(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run0(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.lambda$run$0(Unknown Source)
+	at java.base/java.security.AccessController.doPrivileged(Unknown Source)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)
+	at java.base/java.lang.Thread.run(Unknown Source)
+Caused by: java.lang.RuntimeException: Exception while generating code for:
+FUN name:shareTodayCsv visibility:private modality:FINAL <> ($this:massey.hamhuo.timetagger.presentation.MainActivity) returnType:kotlin.Unit
+  $this: VALUE_PARAMETER name:<this> type:massey.hamhuo.timetagger.presentation.MainActivity
+  BLOCK_BODY
+    VAR name:key type:kotlin.String [val]
+      CALL 'public/*package*/ final fun dayKey$default ($this: massey.hamhuo.timetagger.presentation.MainActivity, time: kotlin.Long, $mask0: kotlin.Int, $handler: kotlin.Any?): kotlin.String declared in massey.hamhuo.timetagger.presentation.MainActivity' type=kotlin.String origin=DEFAULT_DISPATCH_CALL
+        $this: GET_VAR '<this>: massey.hamhuo.timetagger.presentation.MainActivity declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=massey.hamhuo.timetagger.presentation.MainActivity origin=null
+        time: COMPOSITE type=kotlin.Long origin=DEFAULT_VALUE
+          CONST Long type=kotlin.Long value=0
+        $mask0: CONST Int type=kotlin.Int value=1
+        $handler: CONST Null type=kotlin.Any? value=null
+    VAR name:arr type:org.json.JSONArray [val]
+      CALL 'private final fun getEvents (day: kotlin.String): org.json.JSONArray declared in massey.hamhuo.timetagger.presentation.MainActivity' type=org.json.JSONArray origin=null
+        $this: GET_VAR '<this>: massey.hamhuo.timetagger.presentation.MainActivity declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=massey.hamhuo.timetagger.presentation.MainActivity origin=null
+        day: GET_VAR 'val key: kotlin.String [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.String origin=null
+    WHEN type=kotlin.Unit origin=IF
+      BRANCH
+        if: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=EQEQ
+          arg0: CALL 'public open fun length (): kotlin.Int declared in org.json.JSONArray' type=kotlin.Int origin=null
+            $this: GET_VAR 'val arr: org.json.JSONArray [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=org.json.JSONArray origin=null
+          arg1: CONST Int type=kotlin.Int value=0
+        then: BLOCK type=kotlin.Unit origin=null
+          CALL 'public open fun show (): kotlin.Unit declared in android.widget.Toast' type=kotlin.Unit origin=null
+            $this: CALL 'public open fun makeText (p0: @[FlexibleNullability] android.content.Context?, p1: @[FlexibleNullability] kotlin.CharSequence?, p2: kotlin.Int): @[FlexibleNullability] android.widget.Toast? declared in android.widget.Toast' type=@[FlexibleNullability] android.widget.Toast? origin=null
+              p0: GET_VAR '<this>: massey.hamhuo.timetagger.presentation.MainActivity declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=massey.hamhuo.timetagger.presentation.MainActivity origin=null
+              p1: CONST String type=kotlin.String value="今天还没有记录"
+              p2: CONST Int type=kotlin.Int value=0
+          RETURN type=kotlin.Nothing from='private final fun shareTodayCsv (): kotlin.Unit declared in massey.hamhuo.timetagger.presentation.MainActivity'
+            GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:kotlin.Unit visibility:public [final,static] declared in kotlin.Unit' type=kotlin.Unit origin=null
+    VAR name:rows type:kotlin.collections.MutableList<kotlin.Array<kotlin.String>> [val]
+      CALL 'public final fun mutableListOf <T> (): kotlin.collections.MutableList<T of kotlin.collections.CollectionsKt.mutableListOf> [inline] declared in kotlin.collections.CollectionsKt' type=kotlin.collections.MutableList<kotlin.Array<kotlin.String>> origin=null
+        <T>: kotlin.Array<kotlin.String>
+    BLOCK type=kotlin.Unit origin=FOR_LOOP
+      COMPOSITE type=kotlin.Unit origin=null
+        VAR FOR_LOOP_VARIABLE name:i type:kotlin.Int [var]
+          CONST Int type=kotlin.Int value=0
+        VAR IR_TEMPORARY_VARIABLE name:last type:kotlin.Int [val]
+          CALL 'public open fun length (): kotlin.Int declared in org.json.JSONArray' type=kotlin.Int origin=null
+            $this: GET_VAR 'val arr: org.json.JSONArray [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=org.json.JSONArray origin=null
+      DO_WHILE label=MainActivity$shareTodayCsv1 origin=DO_WHILE_COUNTER_LOOP
+        body: COMPOSITE type=kotlin.Unit origin=FOR_LOOP_INNER_WHILE
+          COMPOSITE type=kotlin.Unit origin=FOR_LOOP_NEXT
+            WHEN type=kotlin.Unit origin=null
+              BRANCH
+                if: CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                  $this: CALL 'public final fun less (arg0: kotlin.Int, arg1: kotlin.Int): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                    arg0: GET_VAR 'var i: kotlin.Int [var] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.Int origin=null
+                    arg1: GET_VAR 'val last: kotlin.Int [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.Int origin=null
+                then: BREAK label=null loop.label=MainActivity$shareTodayCsv1
+          BLOCK type=kotlin.Unit origin=null
+            VAR name:cur type:@[FlexibleNullability] org.json.JSONObject? [val]
+              CALL 'public open fun getJSONObject (p0: kotlin.Int): @[FlexibleNullability] org.json.JSONObject? declared in org.json.JSONArray' type=@[FlexibleNullability] org.json.JSONObject? origin=null
+                $this: GET_VAR 'val arr: org.json.JSONArray [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=org.json.JSONArray origin=null
+                p0: GET_VAR 'var i: kotlin.Int [var] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.Int origin=null
+            VAR name:nextEnd type:kotlin.Long [val]
+              WHEN type=kotlin.Long origin=IF
+                BRANCH
+                  if: CALL 'public final fun less (arg0: kotlin.Int, arg1: kotlin.Int): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=LT
+                    arg0: CALL 'public final fun plus (other: kotlin.Int): kotlin.Int [operator] declared in kotlin.Int' type=kotlin.Int origin=PLUS
+                      $this: GET_VAR 'var i: kotlin.Int [var] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.Int origin=null
+                      other: CONST Int type=kotlin.Int value=1
+                    arg1: CALL 'public open fun length (): kotlin.Int declared in org.json.JSONArray' type=kotlin.Int origin=null
+                      $this: GET_VAR 'val arr: org.json.JSONArray [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=org.json.JSONArray origin=null
+                  then: BLOCK type=kotlin.Long origin=null
+                    CALL 'public open fun getLong (p0: @[FlexibleNullability] kotlin.String?): kotlin.Long declared in org.json.JSONObject' type=kotlin.Long origin=null
+                      $this: CALL 'public open fun getJSONObject (p0: kotlin.Int): @[FlexibleNullability] org.json.JSONObject? declared in org.json.JSONArray' type=@[FlexibleNullability] org.json.JSONObject? origin=null
+                        $this: GET_VAR 'val arr: org.json.JSONArray [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=org.json.JSONArray origin=null
+                        p0: CALL 'public final fun plus (other: kotlin.Int): kotlin.Int [operator] declared in kotlin.Int' type=kotlin.Int origin=PLUS
+                          $this: GET_VAR 'var i: kotlin.Int [var] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.Int origin=null
+                          other: CONST Int type=kotlin.Int value=1
+                      p0: CONST String type=kotlin.String value="ts"
+                BRANCH
+                  if: CONST Boolean type=kotlin.Boolean value=true
+                  then: CALL 'public open fun currentTimeMillis (): kotlin.Long declared in java.lang.System' type=kotlin.Long origin=null
+            VAR name:dur type:kotlin.Long [val]
+              CALL 'public final fun minus (other: kotlin.Long): kotlin.Long [operator] declared in kotlin.Long' type=kotlin.Long origin=MINUS
+                $this: GET_VAR 'val nextEnd: kotlin.Long [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.Long origin=null
+                other: CALL 'public open fun getLong (p0: @[FlexibleNullability] kotlin.String?): kotlin.Long declared in org.json.JSONObject' type=kotlin.Long origin=null
+                  $this: GET_VAR 'val cur: @[FlexibleNullability] org.json.JSONObject? [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=@[FlexibleNullability] org.json.JSONObject? origin=null
+                  p0: CONST String type=kotlin.String value="ts"
+            CALL 'public final fun plusAssign <T> (element: T of kotlin.collections.CollectionsKt.plusAssign): kotlin.Unit [inline,operator] declared in kotlin.collections.CollectionsKt' type=kotlin.Unit origin=PLUSEQ
+              <T>: kotlin.Array<kotlin.String>
+              $receiver: GET_VAR 'val rows: kotlin.collections.MutableList<kotlin.Array<kotlin.String>> [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.collections.MutableList<kotlin.Array<kotlin.String>> origin=PLUSEQ
+              element: BLOCK type=kotlin.Array<out kotlin.String> origin=null
+                VAR IR_TEMPORARY_VARIABLE name:tmp0 type:kotlin.Array<out kotlin.String> [val]
+                  CALL 'public final fun arrayOfNulls <T> (size: kotlin.Int): kotlin.Array<T of kotlin.arrayOfNulls?> declared in kotlin' type=kotlin.Array<out kotlin.String> origin=null
+                    <T>: kotlin.String
+                    size: CONST Int type=kotlin.Int value=5
+                CALL 'public final fun set (index: kotlin.Int, value: T of kotlin.Array): kotlin.Unit [operator] declared in kotlin.Array' type=kotlin.Unit origin=null
+                  $this: GET_VAR 'val tmp0: kotlin.Array<out kotlin.String> [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.Array<out kotlin.String> origin=null
+                  index: CONST Int type=kotlin.Int value=0
+                  value: GET_VAR 'val key: kotlin.String [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.String origin=null
+                CALL 'public final fun set (index: kotlin.Int, value: T of kotlin.Array): kotlin.Unit [operator] declared in kotlin.Array' type=kotlin.Unit origin=null
+                  $this: GET_VAR 'val tmp0: kotlin.Array<out kotlin.String> [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.Array<out kotlin.String> origin=null
+                  index: CONST Int type=kotlin.Int value=1
+                  value: CALL 'public final fun format (p0: @[FlexibleNullability] java.util.Date?): @[FlexibleNullability] kotlin.String? [fake_override] declared in java.text.SimpleDateFormat' type=@[FlexibleNullability] kotlin.String? origin=null
+                    $this: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] kotlin.String?, p1: @[FlexibleNullability] java.util.Locale?) declared in java.text.SimpleDateFormat' type=java.text.SimpleDateFormat origin=null
+                      p0: CONST String type=kotlin.String value="HH:mm:ss"
+                      p1: CALL 'public open fun getDefault (): @[FlexibleNullability] java.util.Locale? declared in java.util.Locale' type=@[FlexibleNullability] java.util.Locale? origin=null
+                    p0: CONSTRUCTOR_CALL 'public constructor <init> (p0: kotlin.Long) declared in java.util.Date' type=java.util.Date origin=null
+                      p0: CALL 'public open fun getLong (p0: @[FlexibleNullability] kotlin.String?): kotlin.Long declared in org.json.JSONObject' type=kotlin.Long origin=null
+                        $this: GET_VAR 'val cur: @[FlexibleNullability] org.json.JSONObject? [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=@[FlexibleNullability] org.json.JSONObject? origin=null
+                        p0: CONST String type=kotlin.String value="ts"
+                CALL 'public final fun set (index: kotlin.Int, value: T of kotlin.Array): kotlin.Unit [operator] declared in kotlin.Array' type=kotlin.Unit origin=null
+                  $this: GET_VAR 'val tmp0: kotlin.Array<out kotlin.String> [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.Array<out kotlin.String> origin=null
+                  index: CONST Int type=kotlin.Int value=2
+                  value: CALL 'public final fun format (p0: @[FlexibleNullability] java.util.Date?): @[FlexibleNullability] kotlin.String? [fake_override] declared in java.text.SimpleDateFormat' type=@[FlexibleNullability] kotlin.String? origin=null
+                    $this: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] kotlin.String?, p1: @[FlexibleNullability] java.util.Locale?) declared in java.text.SimpleDateFormat' type=java.text.SimpleDateFormat origin=null
+                      p0: CONST String type=kotlin.String value="HH:mm:ss"
+                      p1: CALL 'public open fun getDefault (): @[FlexibleNullability] java.util.Locale? declared in java.util.Locale' type=@[FlexibleNullability] java.util.Locale? origin=null
+                    p0: CONSTRUCTOR_CALL 'public constructor <init> (p0: kotlin.Long) declared in java.util.Date' type=java.util.Date origin=null
+                      p0: GET_VAR 'val nextEnd: kotlin.Long [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.Long origin=null
+                CALL 'public final fun set (index: kotlin.Int, value: T of kotlin.Array): kotlin.Unit [operator] declared in kotlin.Array' type=kotlin.Unit origin=null
+                  $this: GET_VAR 'val tmp0: kotlin.Array<out kotlin.String> [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.Array<out kotlin.String> origin=null
+                  index: CONST Int type=kotlin.Int value=3
+                  value: CALL 'private final fun formatDuration (ms: kotlin.Long): kotlin.String declared in massey.hamhuo.timetagger.presentation.MainActivity' type=kotlin.String origin=null
+                    $this: GET_VAR '<this>: massey.hamhuo.timetagger.presentation.MainActivity declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=massey.hamhuo.timetagger.presentation.MainActivity origin=null
+                    ms: GET_VAR 'val dur: kotlin.Long [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.Long origin=null
+                CALL 'public final fun set (index: kotlin.Int, value: T of kotlin.Array): kotlin.Unit [operator] declared in kotlin.Array' type=kotlin.Unit origin=null
+                  $this: GET_VAR 'val tmp0: kotlin.Array<out kotlin.String> [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.Array<out kotlin.String> origin=null
+                  index: CONST Int type=kotlin.Int value=4
+                  value: CALL 'public open fun getString (p0: @[FlexibleNullability] kotlin.String?): @[FlexibleNullability] kotlin.String? declared in org.json.JSONObject' type=@[FlexibleNullability] kotlin.String? origin=null
+                    $this: GET_VAR 'val cur: @[FlexibleNullability] org.json.JSONObject? [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=@[FlexibleNullability] org.json.JSONObject? origin=null
+                    p0: CONST String type=kotlin.String value="tag"
+                GET_VAR 'val tmp0: kotlin.Array<out kotlin.String> [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.Array<out kotlin.String> origin=null
+        condition: COMPOSITE type=kotlin.Boolean origin=null
+          CALL 'public final fun <int-prefix-incr-decr> (value: kotlin.Int, delta: kotlin.Int): kotlin.Int declared in kotlin.jvm.internal' type=kotlin.Int origin=null
+            value: GET_VAR 'var i: kotlin.Int [var] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.Int origin=null
+            delta: CONST Int type=kotlin.Int value=1
+          CONST Boolean type=kotlin.Boolean value=true
+    VAR name:csv type:kotlin.String [val]
+      CALL 'public final fun buildString (builderAction: @[ExtensionFunctionType] kotlin.Function1<java.lang.StringBuilder, kotlin.Unit>): kotlin.String [inline] declared in kotlin.text.StringsKt' type=kotlin.String origin=null
+        builderAction: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<java.lang.StringBuilder, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun shareTodayCsv$lambda$18 ($rows: kotlin.collections.MutableList<kotlin.Array<kotlin.String>>): kotlin.Unit declared in massey.hamhuo.timetagger.presentation.MainActivity' type=@[ExtensionFunctionType] kotlin.Function1<java.lang.StringBuilder, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+            $rows: GET_VAR 'val rows: kotlin.collections.MutableList<kotlin.Array<kotlin.String>> [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.collections.MutableList<kotlin.Array<kotlin.String>> origin=null
+    VAR name:file type:java.io.File [val]
+      CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] java.io.File?, p1: @[FlexibleNullability] kotlin.String?) declared in java.io.File' type=java.io.File origin=null
+        p0: CALL 'public open fun getCacheDir (): @[FlexibleNullability] java.io.File? [fake_override] declared in massey.hamhuo.timetagger.presentation.MainActivity' type=@[FlexibleNullability] java.io.File? origin=GET_PROPERTY
+          $this: GET_VAR '<this>: massey.hamhuo.timetagger.presentation.MainActivity declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=massey.hamhuo.timetagger.presentation.MainActivity origin=null
+        p1: STRING_CONCATENATION type=kotlin.String
+          CONST String type=kotlin.String value="time_"
+          GET_VAR 'val key: kotlin.String [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.String origin=null
+          CONST String type=kotlin.String value=".csv"
+    CALL 'public final fun writeText (text: kotlin.String, charset: java.nio.charset.Charset): kotlin.Unit declared in kotlin.io.FilesKt' type=kotlin.Unit origin=null
+      $receiver: GET_VAR 'val file: java.io.File [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=java.io.File origin=null
+      text: GET_VAR 'val csv: kotlin.String [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.String origin=null
+      charset: GET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:UTF_8 type:java.nio.charset.Charset visibility:public [final,static]' type=java.nio.charset.Charset origin=null
+    VAR name:uri type:@[FlexibleNullability] android.net.Uri? [val]
+      CALL 'public open fun getUriForFile (p0: @[EnhancedNullability] android.content.Context, p1: @[EnhancedNullability] kotlin.String, p2: @[EnhancedNullability] java.io.File): @[FlexibleNullability] android.net.Uri? declared in androidx.core.content.FileProvider' type=@[FlexibleNullability] android.net.Uri? origin=null
+        p0: GET_VAR '<this>: massey.hamhuo.timetagger.presentation.MainActivity declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=massey.hamhuo.timetagger.presentation.MainActivity origin=null
+        p1: STRING_CONCATENATION type=kotlin.String
+          CALL 'public open fun getPackageName (): @[FlexibleNullability] kotlin.String? [fake_override] declared in massey.hamhuo.timetagger.presentation.MainActivity' type=@[FlexibleNullability] kotlin.String? origin=GET_PROPERTY
+            $this: GET_VAR '<this>: massey.hamhuo.timetagger.presentation.MainActivity declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=massey.hamhuo.timetagger.presentation.MainActivity origin=null
+          CONST String type=kotlin.String value=".fileprovider"
+        p2: GET_VAR 'val file: java.io.File [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=java.io.File origin=null
+    VAR name:intent type:android.content.Intent [val]
+      CALL 'public final fun apply <T> (block: @[ExtensionFunctionType] kotlin.Function1<T of kotlin.StandardKt.apply, kotlin.Unit>): T of kotlin.StandardKt.apply [inline] declared in kotlin.StandardKt' type=android.content.Intent origin=null
+        <T>: android.content.Intent
+        $receiver: CONSTRUCTOR_CALL 'public constructor <init> (p0: @[FlexibleNullability] kotlin.String?) declared in android.content.Intent' type=android.content.Intent origin=null
+          p0: CONST String type=kotlin.String value="android.intent.action.SEND"
+        block: BLOCK type=@[ExtensionFunctionType] kotlin.Function1<android.content.Intent, kotlin.Unit> origin=LAMBDA
+          COMPOSITE type=kotlin.Unit origin=null
+          FUNCTION_REFERENCE 'private final fun shareTodayCsv$lambda$19 ($uri: @[FlexibleNullability] android.net.Uri?): kotlin.Unit declared in massey.hamhuo.timetagger.presentation.MainActivity' type=@[ExtensionFunctionType] kotlin.Function1<android.content.Intent, kotlin.Unit> origin=INLINE_LAMBDA reflectionTarget=null
+            $uri: GET_VAR 'val uri: @[FlexibleNullability] android.net.Uri? [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=@[FlexibleNullability] android.net.Uri? origin=null
+    CALL 'public open fun startActivity (p0: @[FlexibleNullability] android.content.Intent?): kotlin.Unit [fake_override] declared in massey.hamhuo.timetagger.presentation.MainActivity' type=kotlin.Unit origin=null
+      $this: GET_VAR '<this>: massey.hamhuo.timetagger.presentation.MainActivity declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=massey.hamhuo.timetagger.presentation.MainActivity origin=null
+      p0: CALL 'public open fun createChooser (p0: @[FlexibleNullability] android.content.Intent?, p1: @[FlexibleNullability] kotlin.CharSequence?): @[FlexibleNullability] android.content.Intent? declared in android.content.Intent' type=@[FlexibleNullability] android.content.Intent? origin=null
+        p0: GET_VAR 'val intent: android.content.Intent [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=android.content.Intent origin=null
+        p1: STRING_CONCATENATION type=kotlin.String
+          CONST String type=kotlin.String value="导出 "
+          GET_VAR 'val key: kotlin.String [val] declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv' type=kotlin.String origin=null
+
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:47)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate$default(FunctionCodegen.kt:40)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generateMethodNode(ClassCodegen.kt:406)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generateMethod(ClassCodegen.kt:423)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generate(ClassCodegen.kt:168)
+	at org.jetbrains.kotlin.backend.jvm.FileCodegen.lower(JvmPhases.kt:39)
+	at org.jetbrains.kotlin.backend.common.phaser.PhaseFactoriesKt.createFilePhase$lambda$4(PhaseFactories.kt:71)
+	at org.jetbrains.kotlin.backend.common.phaser.PhaseBuildersKt$createSimpleNamedCompilerPhase$1.phaseBody(PhaseBuilders.kt:69)
+	at org.jetbrains.kotlin.backend.common.phaser.SimpleNamedCompilerPhase.phaseBody(CompilerPhase.kt:226)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invokeSequential(performByIrFile.kt:62)
+	... 43 more
+Caused by: java.lang.RuntimeException: Exception while generating code for:
+FUN INLINE_LAMBDA name:shareTodayCsv$lambda$19 visibility:private modality:FINAL <> ($receiver:android.content.Intent, $uri:@[FlexibleNullability] android.net.Uri?) returnType:kotlin.Unit
+  $receiver: VALUE_PARAMETER name:$this$apply type:android.content.Intent
+  VALUE_PARAMETER BOUND_VALUE_PARAMETER name:$uri index:0 type:@[FlexibleNullability] android.net.Uri?
+  BLOCK_BODY
+    VAR name:$i$a$-apply-MainActivity$shareTodayCsv$intent$1 type:kotlin.Int [val]
+      CONST Int type=kotlin.Int value=0
+    SET_FIELD 'FIELD IR_EXTERNAL_JAVA_DECLARATION_STUB name:EXTRA_MIME_TYPES type:kotlin.String visibility:public [final,static] declared in android.content.Intent' type=kotlin.Unit superQualifierSymbol=android.content.Intent origin=EQ
+      value: CONST String type=kotlin.String value="text/csv"
+    COMPOSITE type=kotlin.Unit origin=null
+      CALL 'public open fun putExtra (p0: @[FlexibleNullability] kotlin.String?, p1: @[EnhancedNullability] android.os.Parcelable?): @[EnhancedNullability] android.content.Intent declared in android.content.Intent' type=@[EnhancedNullability] android.content.Intent origin=null
+        $this: GET_VAR '$this$apply: android.content.Intent declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv$lambda$19' type=android.content.Intent origin=null
+        p0: CONST String type=kotlin.String value="android.intent.extra.STREAM"
+        p1: GET_VAR '$uri: @[FlexibleNullability] android.net.Uri? declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv$lambda$19' type=@[FlexibleNullability] android.net.Uri? origin=null
+      COMPOSITE type=kotlin.Unit origin=null
+    COMPOSITE type=kotlin.Unit origin=null
+      CALL 'public open fun addFlags (p0: kotlin.Int): @[EnhancedNullability] android.content.Intent declared in android.content.Intent' type=@[EnhancedNullability] android.content.Intent origin=null
+        $this: GET_VAR '$this$apply: android.content.Intent declared in massey.hamhuo.timetagger.presentation.MainActivity.shareTodayCsv$lambda$19' type=android.content.Intent origin=null
+        p0: CONST Int type=kotlin.Int value=1
+      COMPOSITE type=kotlin.Unit origin=null
+
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:47)
+	at org.jetbrains.kotlin.backend.jvm.codegen.IrSourceCompilerForInline.generateLambdaBody(IrSourceCompilerForInline.kt:67)
+	at org.jetbrains.kotlin.codegen.inline.ExpressionLambda.generateLambdaBody(LambdaInfo.kt:72)
+	at org.jetbrains.kotlin.backend.jvm.codegen.IrInlineCodegen.genValueAndPut(IrInlineCodegen.kt:100)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall$handleParameter(ExpressionCodegen.kt:616)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall(ExpressionCodegen.kt:644)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrCall.accept(IrCall.kt:24)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitVariable(ExpressionCodegen.kt:790)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitVariable(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.declarations.IrVariable.accept(IrVariable.kt:36)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitStatementContainer(ExpressionCodegen.kt:579)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:584)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrBlockBody.accept(IrBlockBody.kt:20)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.generate(ExpressionCodegen.kt:240)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.doGenerate(FunctionCodegen.kt:123)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:44)
+	... 53 more
+Caused by: java.lang.AssertionError: access of const val: SET_FIELD 'FIELD IR_EXTERNAL_JAVA_DECLARATION_STUB name:EXTRA_MIME_TYPES type:kotlin.String visibility:public [final,static] declared in android.content.Intent' type=kotlin.Unit superQualifierSymbol=android.content.Intent origin=EQ
+  value: CONST String type=kotlin.String value="text/csv"
+
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitFieldAccess(ExpressionCodegen.kt:861)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitFieldAccess(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.visitors.IrElementVisitor$DefaultImpls.visitSetField(IrElementVisitor.kt:206)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitSetField(ExpressionCodegen.kt:908)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitSetField(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrSetField.accept(IrSetField.kt:21)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitStatementContainer(ExpressionCodegen.kt:579)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:584)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrBlockBody.accept(IrBlockBody.kt:20)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.generate(ExpressionCodegen.kt:240)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.doGenerate(FunctionCodegen.kt:123)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:44)
+	... 70 more
+
+
