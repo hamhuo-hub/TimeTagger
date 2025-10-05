@@ -48,5 +48,23 @@
                 android:resource="@drawable/tile_preview" />
         </service>
 
+        <!-- Watch Face Service -->
+        <service
+            android:name=".presentation.TimeTagWatchFaceService"
+            android:exported="true"
+            android:label="TimeTag"
+            android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+                <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
+            </intent-filter>
+            <meta-data
+                android:name="com.google.android.wearable.watchface.preview"
+                android:resource="@drawable/watchface_preview" />
+            <meta-data
+                android:name="com.google.android.wearable.watchface.preview_circular"
+                android:resource="@drawable/watchface_preview_circular" />
+        </service>
+
     </application>
 </manifest>

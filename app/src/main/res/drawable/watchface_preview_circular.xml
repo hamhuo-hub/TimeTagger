@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="384dp"
+    android:height="384dp"
+    android:viewportWidth="384"
+    android:viewportHeight="384">
+    
+    <!-- 圆形背景 -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M 192,192 m -192,0 a 192,192 0 1,1 384,0 a 192,192 0 1,1 -384,0"/>
+    
+    <!-- 时间 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M140,150 h20 v50 h-20z M165,150 h20 v50 h-20z M200,160 h10 v8 h-10z M200,185 h10 v8 h-10z M215,150 h20 v50 h-20z M240,150 h20 v50 h-20z"/>
+    
+    <!-- P1 标签 -->
+    <path
+        android:fillColor="#42A5F5"
+        android:pathData="M 100,220 h 184 a 12,12 0 0,1 12,12 v 24 a 12,12 0 0,1 -12,12 h -184 a 12,12 0 0,1 -12,-12 v -24 a 12,12 0 0,1 12,-12 z"/>
+    
+    <!-- 任务名 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M120,280 h120 v10 h-120z"/>
+</vector>
+

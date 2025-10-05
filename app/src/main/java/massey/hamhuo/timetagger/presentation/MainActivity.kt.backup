@@ -1,0 +1,802 @@
+package massey.hamhuo.timetagger.presentation
+
+import android.app.Activity
+import android.content.ComponentName
+import android.content.Intent
+import android.os.Bundle
+import android.speech.RecognizerIntent
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.wear.compose.material.Icon
+import androidx.wear.compose.material.MaterialTheme
+import androidx.wear.compose.material.Text
+import androidx.wear.tiles.TileService
+import kotlinx.coroutines.delay
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
+import kotlin.math.atan2
+import kotlin.math.sqrt
+
+class MainActivity : ComponentActivity() {
+    private val prefs by lazy { getSharedPreferences("time_tracker", MODE_PRIVATE) }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        checkAndResetDaily()
+
+        setContent {
+            MaterialTheme {
+                App(
+                    getLastTag = { getLastTag() },
+                    onTagAdded = { priority, label -> addTask(priority, label) },
+                    onTaskCompleted = { completeTask() },
+                    onTagChanged = { updateLastTag(it) },
+                    loadTodayRows = { loadTodayRows() },
+                    getPendingTasks = { getPendingTasks() }
+                )
+            }
+        }
+    }
+
+    private fun checkAndResetDaily() {
+        val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        val lastDate = prefs.getString("last_date", "")
+
+        if (lastDate != today) {
+            val lastTag = prefs.getString("last_tag", "")
+            val lastPriority = prefs.getInt("last_priority", -1)
+            val hasOngoingTask = !lastTag.isNullOrEmpty() && lastPriority >= 0
+
+            if (hasOngoingTask && !lastDate.isNullOrEmpty()) {
+                val calendar = Calendar.getInstance()
+                calendar.add(Calendar.DAY_OF_YEAR, -1)
+                calendar.set(Calendar.HOUR_OF_DAY, 23)
+                calendar.set(Calendar.MINUTE, 59)
+                calendar.set(Calendar.SECOND, 59)
+                calendar.set(Calendar.MILLISECOND, 999)
+                val endOfYesterday = calendar.timeInMillis
+
+                val yesterdayKey = "events_$lastDate"
+                val yesterdayArr = JSONArray(prefs.getString(yesterdayKey, "[]"))
+                yesterdayArr.put(JSONObject()
+                    .put("ts", endOfYesterday)
+                    .put("tag", "")
+                    .put("priority", -1))
+                prefs.edit().putString(yesterdayKey, yesterdayArr.toString()).apply()
+
+                calendar.add(Calendar.DAY_OF_YEAR, 1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val startOfToday = calendar.timeInMillis
+
+                val todayKey = "events_$today"
+                val todayArr = JSONArray(prefs.getString(todayKey, "[]"))
+                todayArr.put(JSONObject()
+                    .put("ts", startOfToday)
+                    .put("tag", lastTag)
+                    .put("priority", lastPriority))
+                prefs.edit().putString(todayKey, todayArr.toString()).apply()
+            }
+
+            if (!lastDate.isNullOrEmpty()) {
+                saveDailyLog(lastDate)
+            }
+
+            prefs.edit().putString("last_date", today).apply()
+
+            if (!hasOngoingTask) {
+                prefs.edit()
+                    .putString("last_tag", "")
+                    .putInt("last_priority", -1)
+                    .apply()
+            }
+        }
+    }
+
+    private fun saveDailyLog(date: String?) {
+        try {
+            val key = "events_$date"
+            val eventsJson = prefs.getString(key, "[]") ?: "[]"
+            val arr = JSONArray(eventsJson)
+            if (arr.length() == 0) return
+
+            val externalDir = getExternalFilesDir(null) ?: return
+            val logDir = File(externalDir, "logs")
+            if (!logDir.exists()) logDir.mkdirs()
+
+            val logFile = File(logDir, "$date.txt")
+            val tf = SimpleDateFormat("HH:mm", Locale.getDefault())
+            val sb = StringBuilder()
+
+            sb.appendLine("=== 时间日志 $date ===\n")
+
+            for (i in 0 until arr.length()) {
+                val cur = arr.getJSONObject(i)
+                val start = cur.optLong("ts")
+                val tag = cur.optString("tag")
+                val priority = cur.optInt("priority", -1)
+
+                if (tag.isEmpty()) continue
+
+                val end = if (i + 1 < arr.length()) {
+                    arr.getJSONObject(i + 1).optLong("ts")
+                } else {
+                    start + 60000
+                }
+
+                val startStr = tf.format(Date(start))
+                val endStr = tf.format(Date(end))
+                val duration = formatDurationShort(end - start)
+                val priorityName = when (priority) {
+                    0 -> "P0-重要且紧急"
+                    1 -> "P1-重要不紧急"
+                    2 -> "P2-紧急不重要"
+                    3 -> "P3-不重要不紧急"
+                    else -> "未分类"
+                }
+
+                sb.appendLine("$startStr - $endStr ($duration)")
+                sb.appendLine("[$priorityName] $tag")
+                sb.appendLine()
+            }
+
+            logFile.writeText(sb.toString())
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    // 新增：添加任务（支持队列）
+    private fun addTask(priority: Int, label: String) {
+        val currentPriority = prefs.getInt("last_priority", -1)
+
+        // 如果当前有任务且新任务优先级更低，加入待办队列
+        if (currentPriority >= 0 && priority > currentPriority) {
+            addToPendingQueue(priority, label)
+        } else {
+            // 直接开始任务
+            startTask(priority, label)
+        }
+    }
+
+    // 开始任务
+    private fun startTask(priority: Int, label: String) {
+        val now = System.currentTimeMillis()
+        val day = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(now))
+        val arr = JSONArray(prefs.getString("events_$day", "[]"))
+        arr.put(JSONObject().put("ts", now).put("tag", label).put("priority", priority))
+        prefs.edit()
+            .putString("events_$day", arr.toString())
+            .putString("last_tag", label)
+            .putInt("last_priority", priority)
+            .putString("last_date", day)
+            .apply()
+        notifyTileUpdate()
+    }
+
+    // 添加到待办队列
+    private fun addToPendingQueue(priority: Int, label: String) {
+        val queue = JSONArray(prefs.getString("pending_queue", "[]"))
+        queue.put(JSONObject()
+            .put("priority", priority)
+            .put("tag", label)
+            .put("addTime", System.currentTimeMillis()))
+        prefs.edit().putString("pending_queue", queue.toString()).apply()
+        notifyTileUpdate()
+    }
+
+    // 获取待办任务列表
+    private fun getPendingTasks(): List<PendingTask> {
+        val queue = JSONArray(prefs.getString("pending_queue", "[]"))
+        val tasks = mutableListOf<PendingTask>()
+        for (i in 0 until queue.length()) {
+            val obj = queue.getJSONObject(i)
+            tasks.add(PendingTask(
+                priority = obj.getInt("priority"),
+                tag = obj.getString("tag"),
+                addTime = obj.getLong("addTime")
+            ))
+        }
+        return tasks
+    }
+
+    // 完成任务并自动开始下一个
+    private fun completeTask() {
+        val now = System.currentTimeMillis()
+        val day = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(now))
+
+        // 结束当前任务
+        val arr = JSONArray(prefs.getString("events_$day", "[]"))
+        arr.put(JSONObject().put("ts", now).put("tag", "").put("priority", -1))
+        prefs.edit()
+            .putString("events_$day", arr.toString())
+            .putString("last_tag", "")
+            .putInt("last_priority", -1)
+            .apply()
+
+        // 从队列中取下一个任务
+        val queue = JSONArray(prefs.getString("pending_queue", "[]"))
+        if (queue.length() > 0) {
+            // 按优先级排序（P0 > P1 > P2 > P3），同优先级按时间排序
+            val tasks = mutableListOf<Triple<Int, String, Long>>()
+            for (i in 0 until queue.length()) {
+                val obj = queue.getJSONObject(i)
+                tasks.add(Triple(
+                    obj.getInt("priority"),
+                    obj.getString("tag"),
+                    obj.getLong("addTime")
+                ))
+            }
+            tasks.sortWith(compareBy({ it.first }, { it.third }))
+
+            // 取出第一个任务
+            val next = tasks.first()
+            startTask(next.first, next.second)
+
+            // 从队列中移除
+            val newQueue = JSONArray()
+            tasks.drop(1).forEach {
+                newQueue.put(JSONObject()
+                    .put("priority", it.first)
+                    .put("tag", it.second)
+                    .put("addTime", it.third))
+            }
+            prefs.edit().putString("pending_queue", newQueue.toString()).apply()
+        }
+
+        notifyTileUpdate()
+    }
+
+    private fun updateLastTag(label: String) {
+        prefs.edit().putString("last_tag", label).apply()
+        notifyTileUpdate()
+    }
+
+    private fun getLastTag(): Pair<Int, String> {
+        val tag = prefs.getString("last_tag", "") ?: ""
+        val priority = prefs.getInt("last_priority", -1)
+        return Pair(priority, tag)
+    }
+
+    private fun loadTodayRows(): List<Row> {
+        val key = "events_" + SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            .format(Date(System.currentTimeMillis()))
+        val arr = try { JSONArray(prefs.getString(key, "[]")) } catch (_: Exception) { JSONArray() }
+        if (arr.length() == 0) return emptyList()
+
+        val rows = mutableListOf<Row>()
+        val hasCurrentTask = prefs.getString("last_tag", "")?.isNotEmpty() == true
+
+        for (i in 0 until arr.length()) {
+            val cur = arr.getJSONObject(i)
+            val start = cur.optLong("ts")
+            val tag = cur.optString("tag")
+            val priority = cur.optInt("priority", -1)
+
+            if (tag.isEmpty()) continue
+
+            val end = if (i + 1 < arr.length()) {
+                arr.getJSONObject(i + 1).optLong("ts")
+            } else {
+                if (hasCurrentTask) {
+                    System.currentTimeMillis()
+                } else {
+                    start + 60000
+                }
+            }
+            rows += Row(start, end, tag, priority)
+        }
+        return rows
+    }
+
+    private fun notifyTileUpdate() {
+        try {
+            TileService.getUpdater(this)
+                .requestUpdate(TimeTagTileService::class.java)
+        } catch (e: Exception) {
+        }
+    }
+}
+
+private data class Row(val start: Long, val end: Long, val tag: String, val priority: Int)
+private data class PendingTask(val priority: Int, val tag: String, val addTime: Long)
+
+private data class PriorityConfig(
+    val label: String,
+    val color: Color,
+    val description: String
+)
+
+private val priorityConfigs = mapOf(
+    0 to PriorityConfig("P0", Color(0xFFEF5350), "重要且紧急"),
+    1 to PriorityConfig("P1", Color(0xFF42A5F5), "重要不紧急"),
+    2 to PriorityConfig("P2", Color(0xFFFFCA28), "紧急不重要"),
+    3 to PriorityConfig("P3", Color(0xFF78909C), "不重要不紧急")
+)
+
+@Composable
+private fun App(
+    getLastTag: () -> Pair<Int, String>,
+    onTagAdded: (Int, String) -> Unit,
+    onTaskCompleted: () -> Unit,
+    onTagChanged: (String) -> Unit,
+    loadTodayRows: () -> List<Row>,
+    getPendingTasks: () -> List<PendingTask>
+) {
+    var showHistory by remember { mutableStateOf(false) }
+    var showPending by remember { mutableStateOf(false) }
+
+    when {
+        showHistory -> {
+            HistoryScreen(
+                rows = loadTodayRows(),
+                onBack = { showHistory = false }
+            )
+        }
+        showPending -> {
+            PendingTasksScreen(
+                tasks = getPendingTasks(),
+                onBack = { showPending = false }
+            )
+        }
+        else -> {
+            PriorityCircleScreen(
+                getLastTag = getLastTag,
+                onTagAdded = onTagAdded,
+                onTaskCompleted = onTaskCompleted,
+                onTagChanged = onTagChanged,
+                onClickTime = { showHistory = true },
+                onClickPending = { showPending = true },   // ← 改为点击 + 号看代办
+                pendingCount = getPendingTasks().size
+            )
+        }
+    }
+}
+
+@Composable
+private fun PriorityCircleScreen(
+    getLastTag: () -> Pair<Int, String>,
+    onTagAdded: (Int, String) -> Unit,
+    onTaskCompleted: () -> Unit,
+    onTagChanged: (String) -> Unit,
+    onClickTime: () -> Unit,
+    onClickPending: () -> Unit,   // ← 仍然使用点击 + 号看代办
+    pendingCount: Int
+) {
+    val time by rememberTimeMinuteTicker()
+    var currentTag by remember { mutableStateOf("") }
+    var currentPriority by remember { mutableStateOf(-1) }
+    var refreshTrigger by remember { mutableStateOf(0) }
+    val context = LocalContext.current
+
+    LaunchedEffect(refreshTrigger) {
+        val (priority, tag) = getLastTag()
+        currentTag = tag
+        currentPriority = priority
+    }
+
+    var pendingPriority by remember { mutableStateOf(-1) }
+
+    val voiceLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { res ->
+        if (res.resultCode == Activity.RESULT_OK) {
+            val spoken = res.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()?.trim()
+            if (!spoken.isNullOrEmpty() && pendingPriority >= 0) {
+                currentTag = spoken
+                currentPriority = pendingPriority
+                onTagAdded(pendingPriority, spoken)
+                refreshTrigger++
+            }
+        }
+        pendingPriority = -1
+    }
+
+    val editLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { res ->
+        if (res.resultCode == Activity.RESULT_OK) {
+            val spoken = res.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()?.trim()
+            if (!spoken.isNullOrEmpty()) {
+                currentTag = spoken
+                onTagChanged(spoken)
+                refreshTrigger++
+            }
+        }
+    }
+
+    fun startVoiceInput(priority: Int, isEdit: Boolean = false) {
+        pendingPriority = priority
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+            putExtra(RecognizerIntent.EXTRA_PROMPT, if (isEdit) "修改任务名称" else "说出任务名称")
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+            flags = Intent.FLAG_ACTIVITY_NO_HISTORY
+        }
+
+        val packageManager = context.packageManager
+        val activities = packageManager.queryIntentActivities(intent, 0)
+        val preferredPackages = listOf(
+            "com.samsung.android.bixby.agent",
+            "com.samsung.android.svoice",
+            "com.google.android.googlequicksearchbox",
+            "com.google.android.voicesearch"
+        )
+        for (pkg in preferredPackages) {
+            val found = activities.find { it.activityInfo.packageName == pkg }
+            if (found != null) {
+                intent.component = ComponentName(
+                    found.activityInfo.packageName,
+                    found.activityInfo.name
+                )
+                break
+            }
+        }
+
+        if (isEdit) editLauncher.launch(intent) else voiceLauncher.launch(intent)
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        PriorityArcRing(onPriorityClick = { priority -> startVoiceInput(priority) })
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 36.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top
+        ) {
+            var lastClickTime by remember { mutableStateOf(0L) }
+
+            // 顶部区域：待办按钮（固定高度）
+            Box(
+                modifier = Modifier.height(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (pendingCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color(0x11000000))
+                            .clickable { onClickPending() }
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "+$pendingCount",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF888888)
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // 中部：时间（固定位置）
+            Text(
+                text = time,
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .padding(vertical = 4.dp)
+                    .pointerInput(Unit) {
+                        detectTapGestures(onTap = { onClickTime() })
+                    }
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            // 下方：标签或空闲图标（固定高度区域）
+            Box(
+                modifier = Modifier.height(70.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                if (currentTag.isNotEmpty() && currentPriority >= 0) {
+                    // 有任务：显示标签
+                    val config = priorityConfigs[currentPriority]!!
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Top
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(config.color)
+                        )
+                        Spacer(Modifier.height(8.dp))
+
+                        Text(
+                            text = currentTag,
+                            fontSize = 16.sp,
+                            lineHeight = 20.sp,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.pointerInput(Unit) {
+                                detectTapGestures(
+                                    onLongPress = { startVoiceInput(currentPriority, isEdit = true) },
+                                    onTap = {
+                                        val now = System.currentTimeMillis()
+                                        if (now - lastClickTime < 500) {
+                                            // 双击完成
+                                            currentTag = ""
+                                            currentPriority = -1
+                                            onTaskCompleted()
+                                            refreshTrigger++
+                                        }
+                                        lastClickTime = now
+                                    }
+                                )
+                            }
+                        )
+                    }
+                } else {
+                    // 无任务：显示空闲图标
+                    Icon(
+                        imageVector = Icons.Filled.CheckCircle,
+                        contentDescription = "空闲",
+                        modifier = Modifier.size(32.dp),
+                        tint = Color(0xFF666666)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PriorityArcRing(onPriorityClick: (Int) -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures { offset ->
+                    val centerX = size.width / 2f
+                    val centerY = size.height / 2f
+                    val dx = offset.x - centerX
+                    val dy = offset.y - centerY
+                    val distance = sqrt(dx * dx + dy * dy)
+
+                    val outerRadius = size.width * 0.48f
+                    val innerRadius = size.width * 0.35f
+
+                    if (distance in innerRadius..outerRadius) {
+                        var angle = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat()
+                        if (angle < 0) angle += 360f
+
+                        val priority = when {
+                            angle >= 315f || angle < 45f -> 1
+                            angle >= 45f && angle < 135f -> 2
+                            angle >= 135f && angle < 225f -> 3
+                            else -> 0
+                        }
+
+                        onPriorityClick(priority)
+                    }
+                }
+            }
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val centerX = size.width / 2f
+            val centerY = size.height / 2f
+            val strokeWidth = 32f
+            val radius = size.width * 0.415f
+            val topLeft = Offset(centerX - radius, centerY - radius)
+            val arcSize = Size(radius * 2, radius * 2)
+
+            drawArc(
+                color = priorityConfigs[0]!!.color,
+                startAngle = 225f,
+                sweepAngle = 90f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            )
+
+            drawArc(
+                color = priorityConfigs[1]!!.color,
+                startAngle = 315f,
+                sweepAngle = 90f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            )
+
+            drawArc(
+                color = priorityConfigs[2]!!.color,
+                startAngle = 45f,
+                sweepAngle = 90f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            )
+
+            drawArc(
+                color = priorityConfigs[3]!!.color,
+                startAngle = 135f,
+                sweepAngle = 90f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            )
+        }
+    }
+}
+
+@Composable
+private fun PendingTasksScreen(
+    tasks: List<PendingTask>,
+    onBack: () -> Unit
+) {
+    BackHandler { onBack() }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        item {
+            Text(
+                text = "待办任务",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+        }
+
+        items(tasks.sortedWith(compareBy({ it.priority }, { it.addTime }))) { task ->
+            val config = priorityConfigs[task.priority]
+            if (config != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(config.color)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = task.tag,
+                        fontSize = 14.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HistoryScreen(rows: List<Row>, onBack: () -> Unit) {
+    BackHandler { onBack() }
+
+    val tf = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        items(rows) { r ->
+            val startStr = tf.format(Date(r.start))
+            val endStr = tf.format(Date(r.end))
+            val durStr = formatDurationShort(r.end - r.start)
+            val config = priorityConfigs[r.priority]
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(vertical = 6.dp)
+            ) {
+                Text(
+                    text = "$startStr - $endStr",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    if (config != null) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(config.color)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    Text(
+                        text = "$durStr${if (r.tag.isNotEmpty()) "  ${r.tag}" else ""}",
+                        fontSize = 14.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun formatDurationShort(ms: Long): String {
+    val totalMinutes = ms / 60000
+    val h = totalMinutes / 60
+    val m = totalMinutes % 60
+    return when {
+        h > 0 && m > 0 -> "${h}h ${m}m"
+        h > 0 -> "${h}h"
+        else -> "${m}m"
+    }
+}
+
+@Composable
+private fun rememberTimeMinuteTicker(): State<String> {
+    val state = remember { mutableStateOf(currentTimeHHmm()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            state.value = currentTimeHHmm()
+            delay(60_000L - (System.currentTimeMillis() % 60_000L))
+        }
+    }
+    return state
+}
+
+private fun currentTimeHHmm(): String =
+    SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())

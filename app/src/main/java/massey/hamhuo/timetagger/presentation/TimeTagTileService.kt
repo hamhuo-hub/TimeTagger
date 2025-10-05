@@ -1,18 +1,17 @@
 package massey.hamhuo.timetagger.presentation
 
-import android.content.ComponentName
 import androidx.wear.protolayout.ActionBuilders
 import androidx.wear.protolayout.ColorBuilders.argb
 import androidx.wear.protolayout.DimensionBuilders.dp
 import androidx.wear.protolayout.DimensionBuilders.expand
 import androidx.wear.protolayout.DimensionBuilders.sp
+import androidx.wear.protolayout.DimensionBuilders.wrap
 import androidx.wear.protolayout.LayoutElementBuilders
-import androidx.wear.protolayout.LayoutElementBuilders.Column
-import androidx.wear.protolayout.LayoutElementBuilders.Spacer
-import androidx.wear.protolayout.LayoutElementBuilders.Text
+import androidx.wear.protolayout.LayoutElementBuilders.*
 import androidx.wear.protolayout.ModifiersBuilders
 import androidx.wear.protolayout.ModifiersBuilders.Background
 import androidx.wear.protolayout.ModifiersBuilders.Clickable
+import androidx.wear.protolayout.ModifiersBuilders.Corner
 import androidx.wear.protolayout.ModifiersBuilders.Padding
 import androidx.wear.protolayout.ResourceBuilders
 import androidx.wear.tiles.RequestBuilders
@@ -21,56 +20,99 @@ import androidx.wear.tiles.TileService
 import androidx.wear.protolayout.TimelineBuilders
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import java.text.SimpleDateFormat
+import massey.hamhuo.timetagger.data.repository.TimeTrackerRepository
+import massey.hamhuo.timetagger.util.DateFormatter
 import java.util.*
 
-/**
- * 显示当前时间（HH:mm）与最近标签（last_tag），点击 Tile 打开应用。
- * 与应用通过 SharedPreferences("time_tracker") 同步。
- */
 class TimeTagTileService : TileService() {
 
-    private val prefs by lazy {
-        applicationContext.getSharedPreferences("time_tracker", MODE_PRIVATE)
+    private val repository by lazy {
+        TimeTrackerRepository(applicationContext)
     }
 
+    // 优先级配置
+    private data class PriorityConfig(
+        val color: Int,
+        val labelCn: String,
+        val labelEn: String
+    )
+
+    private val priorityConfigs = mapOf(
+        0 to PriorityConfig(0xFFEF5350.toInt(), "突发", "Important & Urgent"),
+        1 to PriorityConfig(0xFF42A5F5.toInt(), "重要任务", "Important"),
+        2 to PriorityConfig(0xFFFFCA28.toInt(), "紧急任务", "Urgent"),
+        3 to PriorityConfig(0xFF78909C.toInt(), "休息", "Neither")
+    )
+
     override fun onTileRequest(requestParams: RequestBuilders.TileRequest): ListenableFuture<TileBuilders.Tile> {
-        val now = System.currentTimeMillis()
-        val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(now))
-        val lastTag = prefs.getString("last_tag", "") ?: ""
+        return try {
+            val timeStr = DateFormatter.getCurrentTime()
+            val currentTask = repository.getCurrentTask()
+            val lastTag = currentTask.tag
+            val lastPriority = currentTask.priority
 
-        val root = tileLayout(timeStr, lastTag)
+            val root = tileLayout(timeStr, lastTag, lastPriority)
 
-        val tile = TileBuilders.Tile.Builder()
-            .setResourcesVersion(RES_VERSION)
-            .setFreshnessIntervalMillis(60_000) // 1 min
-            .setTileTimeline(
-                TimelineBuilders.Timeline.Builder()
-                    .addTimelineEntry(
-                        TimelineBuilders.TimelineEntry.Builder()
-                            .setLayout(
-                                LayoutElementBuilders.Layout.Builder()
-                                    .setRoot(root)
-                                    .build()
-                            )
-                            .build()
-                    )
-                    .build()
-            )
-            .build()
+            val tile = TileBuilders.Tile.Builder()
+                .setResourcesVersion(RES_VERSION)
+                .setFreshnessIntervalMillis(60_000)
+                .setTileTimeline(
+                    TimelineBuilders.Timeline.Builder()
+                        .addTimelineEntry(
+                            TimelineBuilders.TimelineEntry.Builder()
+                                .setLayout(
+                                    LayoutElementBuilders.Layout.Builder()
+                                        .setRoot(root)
+                                        .build()
+                                )
+                                .build()
+                        )
+                        .build()
+                )
+                .build()
 
-        return Futures.immediateFuture(tile)
+            Futures.immediateFuture(tile)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // 返回一个简单的默认 Tile
+            val defaultRoot = createDefaultTile()
+            val defaultTile = TileBuilders.Tile.Builder()
+                .setResourcesVersion(RES_VERSION)
+                .setFreshnessIntervalMillis(60_000)
+                .setTileTimeline(
+                    TimelineBuilders.Timeline.Builder()
+                        .addTimelineEntry(
+                            TimelineBuilders.TimelineEntry.Builder()
+                                .setLayout(
+                                    LayoutElementBuilders.Layout.Builder()
+                                        .setRoot(defaultRoot)
+                                        .build()
+                                )
+                                .build()
+                        )
+                        .build()
+                )
+                .build()
+            Futures.immediateFuture(defaultTile)
+        }
     }
 
     override fun onTileResourcesRequest(requestParams: RequestBuilders.ResourcesRequest): ListenableFuture<ResourceBuilders.Resources> {
-        val res = ResourceBuilders.Resources.Builder()
-            .setVersion(RES_VERSION)
-            .build()
-        return Futures.immediateFuture(res)
+        return try {
+            val res = ResourceBuilders.Resources.Builder()
+                .setVersion(RES_VERSION)
+                .build()
+            Futures.immediateFuture(res)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            val defaultRes = ResourceBuilders.Resources.Builder()
+                .setVersion(RES_VERSION)
+                .build()
+            Futures.immediateFuture(defaultRes)
+        }
     }
 
-    private fun tileLayout(timeStr: String, lastTag: String): LayoutElementBuilders.LayoutElement {
-        // 点击打开应用
+    private fun tileLayout(timeStr: String, lastTag: String, priority: Int): LayoutElementBuilders.LayoutElement {
         val clickable = Clickable.Builder()
             .setId("open_app")
             .setOnClick(
@@ -85,41 +127,62 @@ class TimeTagTileService : TileService() {
             )
             .build()
 
-        // 时间文本（大号、加粗）
+        // 时间文本
         val timeText = Text.Builder()
             .setText(timeStr)
             .setFontStyle(
-                LayoutElementBuilders.FontStyle.Builder()
-                    .setSize(sp(32f))
-                    .setWeight(LayoutElementBuilders.FONT_WEIGHT_BOLD)
+                FontStyle.Builder()
+                    .setSize(sp(36f))
+                    .setWeight(FONT_WEIGHT_BOLD)
                     .setColor(argb(0xFFFFFFFF.toInt()))
                     .build()
             )
             .build()
 
-        // 标签文本（小号）
-        val tagText = Text.Builder()
-            .setText(if (lastTag.isEmpty()) "Tap to start" else lastTag)
-            .setFontStyle(
-                LayoutElementBuilders.FontStyle.Builder()
-                    .setSize(sp(16f))
-                    .setColor(argb(if (lastTag.isEmpty()) 0xFF888888.toInt() else 0xFFFFFFFF.toInt()))
-                    .build()
-            )
-            .build()
-
-        // 垂直布局
         val column = Column.Builder()
             .setWidth(expand())
             .setHeight(expand())
-            .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
+            .setHorizontalAlignment(HORIZONTAL_ALIGN_CENTER)
             .addContent(timeText)
             .addContent(Spacer.Builder().setHeight(dp(8f)).build())
-            .addContent(tagText)
-            .build()
 
-        // 根容器
-        return LayoutElementBuilders.Box.Builder()
+        if (lastTag.isNotEmpty() && priority >= 0) {
+            // 有任务时显示优先级标签和任务名
+            val config = priorityConfigs[priority]
+            if (config != null) {
+                // 优先级标签（带背景色的小标签）
+                val priorityLabel = createPriorityLabel(priority, config)
+                column.addContent(priorityLabel)
+                column.addContent(Spacer.Builder().setHeight(dp(6f)).build())
+
+                // 任务名称
+                val taskText = Text.Builder()
+                    .setText(lastTag)
+                    .setMaxLines(2)
+                    .setFontStyle(
+                        FontStyle.Builder()
+                            .setSize(sp(14f))
+                            .setColor(argb(0xFFFFFFFF.toInt()))
+                            .build()
+                    )
+                    .build()
+                column.addContent(taskText)
+            }
+        } else {
+            // 无任务时显示提示
+            val hintText = Text.Builder()
+                .setText("Tap to start")
+                .setFontStyle(
+                    FontStyle.Builder()
+                        .setSize(sp(14f))
+                        .setColor(argb(0xFF888888.toInt()))
+                        .build()
+                )
+                .build()
+            column.addContent(hintText)
+        }
+
+        return Box.Builder()
             .setWidth(expand())
             .setHeight(expand())
             .setModifiers(
@@ -127,7 +190,7 @@ class TimeTagTileService : TileService() {
                     .setClickable(clickable)
                     .setPadding(
                         Padding.Builder()
-                            .setAll(dp(16f))
+                            .setAll(dp(12f))
                             .build()
                     )
                     .setBackground(
@@ -137,7 +200,138 @@ class TimeTagTileService : TileService() {
                     )
                     .build()
             )
-            .addContent(column)
+            .addContent(column.build())
+            .build()
+    }
+
+    private fun createPriorityLabel(priority: Int, config: PriorityConfig): LayoutElementBuilders.LayoutElement {
+        // P0/P1/P2/P3 标签
+        val pLabel = Text.Builder()
+            .setText("P$priority")
+            .setFontStyle(
+                FontStyle.Builder()
+                    .setSize(sp(11f))
+                    .setWeight(FONT_WEIGHT_BOLD)
+                    .setColor(argb(0xFFFFFFFF.toInt()))
+                    .build()
+            )
+            .build()
+
+        // 中文描述
+        val cnLabel = Text.Builder()
+            .setText(config.labelCn)
+            .setFontStyle(
+                FontStyle.Builder()
+                    .setSize(sp(10f))
+                    .setColor(argb(0xFFFFFFFF.toInt()))
+                    .build()
+            )
+            .build()
+
+        // 英文描述
+        val enLabel = Text.Builder()
+            .setText(config.labelEn)
+            .setFontStyle(
+                FontStyle.Builder()
+                    .setSize(sp(9f))
+                    .setColor(argb(0xFFEEEEEE.toInt()))
+                    .build()
+            )
+            .build()
+
+        // 水平排列：P标签 + 描述文字
+        val labelRow = Row.Builder()
+            .setWidth(wrap())
+            .setHeight(wrap())
+            .setVerticalAlignment(VERTICAL_ALIGN_CENTER)
+            .addContent(pLabel)
+            .addContent(Spacer.Builder().setWidth(dp(6f)).build())
+            .addContent(
+                Column.Builder()
+                    .setWidth(wrap())
+                    .setHeight(wrap())
+                    .addContent(cnLabel)
+                    .addContent(enLabel)
+                    .build()
+            )
+            .build()
+
+        // 带圆角背景的容器
+        return Box.Builder()
+            .setWidth(wrap())
+            .setHeight(wrap())
+            .setModifiers(
+                ModifiersBuilders.Modifiers.Builder()
+                    .setPadding(
+                        Padding.Builder()
+                            .setStart(dp(8f))
+                            .setEnd(dp(8f))
+                            .setTop(dp(4f))
+                            .setBottom(dp(4f))
+                            .build()
+                    )
+                    .setBackground(
+                        Background.Builder()
+                            .setColor(argb(config.color))
+                            .setCorner(
+                                Corner.Builder()
+                                    .setRadius(dp(12f))
+                                    .build()
+                            )
+                            .build()
+                    )
+                    .build()
+            )
+            .addContent(labelRow)
+            .build()
+    }
+
+    private fun createDefaultTile(): LayoutElementBuilders.LayoutElement {
+        val clickable = Clickable.Builder()
+            .setId("open_app")
+            .setOnClick(
+                ActionBuilders.LaunchAction.Builder()
+                    .setAndroidActivity(
+                        ActionBuilders.AndroidActivity.Builder()
+                            .setClassName(MainActivity::class.java.name)
+                            .setPackageName(applicationContext.packageName)
+                            .build()
+                    )
+                    .build()
+            )
+            .build()
+
+        val text = Text.Builder()
+            .setText("Tap to open")
+            .setFontStyle(
+                FontStyle.Builder()
+                    .setSize(sp(16f))
+                    .setColor(argb(0xFFFFFFFF.toInt()))
+                    .build()
+            )
+            .build()
+
+        return Box.Builder()
+            .setWidth(expand())
+            .setHeight(expand())
+            .setModifiers(
+                ModifiersBuilders.Modifiers.Builder()
+                    .setClickable(clickable)
+                    .setBackground(
+                        Background.Builder()
+                            .setColor(argb(0xFF000000.toInt()))
+                            .build()
+                    )
+                    .build()
+            )
+            .addContent(
+                Column.Builder()
+                    .setWidth(expand())
+                    .setHeight(expand())
+                    .setHorizontalAlignment(HORIZONTAL_ALIGN_CENTER)
+                    .addContent(text)
+                    .build()
+            )
             .build()
     }
 

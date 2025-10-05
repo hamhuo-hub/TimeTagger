@@ -1,0 +1,217 @@
+package massey.hamhuo.timetagger.data.repository
+
+import android.content.Context
+import android.content.SharedPreferences
+import massey.hamhuo.timetagger.data.model.CurrentTask
+import massey.hamhuo.timetagger.data.model.PendingTask
+import massey.hamhuo.timetagger.data.model.Task
+import massey.hamhuo.timetagger.data.model.TimeRecord
+import org.json.JSONArray
+import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.*
+
+/**
+ * 时间追踪数据仓库
+ * 负责所有数据的持久化操作
+ */
+class TimeTrackerRepository(context: Context) {
+    
+    private val prefs: SharedPreferences = 
+        context.getSharedPreferences("time_tracker", Context.MODE_PRIVATE)
+    
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    
+    // ==================== 当前任务 ====================
+    
+    /**
+     * 获取当前正在进行的任务
+     */
+    fun getCurrentTask(): CurrentTask {
+        val tag = prefs.getString("last_tag", "") ?: ""
+        val priority = prefs.getInt("last_priority", -1)
+        return CurrentTask(priority, tag)
+    }
+    
+    /**
+     * 更新当前任务标签
+     */
+    fun updateCurrentTaskTag(tag: String) {
+        prefs.edit().putString("last_tag", tag).apply()
+    }
+    
+    /**
+     * 清除当前任务
+     */
+    fun clearCurrentTask() {
+        prefs.edit()
+            .putString("last_tag", "")
+            .putInt("last_priority", -1)
+            .apply()
+    }
+    
+    // ==================== 任务事件 ====================
+    
+    /**
+     * 添加任务事件
+     */
+    fun addTaskEvent(task: Task) {
+        val now = task.timestamp
+        val day = dateFormat.format(Date(now))
+        val key = "events_$day"
+        val arr = JSONArray(prefs.getString(key, "[]"))
+        
+        arr.put(JSONObject()
+            .put("ts", now)
+            .put("tag", task.tag)
+            .put("priority", task.priority))
+        
+        prefs.edit()
+            .putString(key, arr.toString())
+            .putString("last_tag", task.tag)
+            .putInt("last_priority", task.priority)
+            .putString("last_date", day)
+            .apply()
+    }
+    
+    /**
+     * 添加任务结束事件
+     */
+    fun addTaskEndEvent(timestamp: Long = System.currentTimeMillis()) {
+        val day = dateFormat.format(Date(timestamp))
+        val key = "events_$day"
+        val arr = JSONArray(prefs.getString(key, "[]"))
+        
+        arr.put(JSONObject()
+            .put("ts", timestamp)
+            .put("tag", "")
+            .put("priority", -1))
+        
+        prefs.edit().putString(key, arr.toString()).apply()
+    }
+    
+    /**
+     * 获取今天的时间记录
+     */
+    fun getTodayRecords(): List<TimeRecord> {
+        val key = "events_${dateFormat.format(Date())}"
+        val arr = try { 
+            JSONArray(prefs.getString(key, "[]")) 
+        } catch (_: Exception) { 
+            JSONArray() 
+        }
+        
+        if (arr.length() == 0) return emptyList()
+        
+        val records = mutableListOf<TimeRecord>()
+        val hasCurrentTask = getCurrentTask().tag.isNotEmpty()
+        
+        for (i in 0 until arr.length()) {
+            val cur = arr.getJSONObject(i)
+            val start = cur.optLong("ts")
+            val tag = cur.optString("tag")
+            val priority = cur.optInt("priority", -1)
+            
+            if (tag.isEmpty()) continue
+            
+            val end = if (i + 1 < arr.length()) {
+                arr.getJSONObject(i + 1).optLong("ts")
+            } else {
+                if (hasCurrentTask) System.currentTimeMillis() else start + 60000
+            }
+            
+            records += TimeRecord(start, end, tag, priority)
+        }
+        return records
+    }
+    
+    /**
+     * 获取指定日期的事件数据（用于跨日处理）
+     */
+    fun getEventsForDate(date: String): JSONArray {
+        return JSONArray(prefs.getString("events_$date", "[]"))
+    }
+    
+    /**
+     * 保存指定日期的事件数据
+     */
+    fun saveEventsForDate(date: String, events: JSONArray) {
+        prefs.edit().putString("events_$date", events.toString()).apply()
+    }
+    
+    // ==================== 待办队列 ====================
+    
+    /**
+     * 添加到待办队列
+     */
+    fun addToPendingQueue(task: Task) {
+        val queue = JSONArray(prefs.getString("pending_queue", "[]"))
+        queue.put(JSONObject()
+            .put("priority", task.priority)
+            .put("tag", task.tag)
+            .put("addTime", task.timestamp))
+        prefs.edit().putString("pending_queue", queue.toString()).apply()
+    }
+    
+    /**
+     * 获取待办任务列表
+     */
+    fun getPendingTasks(): List<PendingTask> {
+        val queue = JSONArray(prefs.getString("pending_queue", "[]"))
+        val tasks = mutableListOf<PendingTask>()
+        for (i in 0 until queue.length()) {
+            val obj = queue.getJSONObject(i)
+            tasks.add(PendingTask(
+                priority = obj.getInt("priority"),
+                tag = obj.getString("tag"),
+                addTime = obj.getLong("addTime")
+            ))
+        }
+        return tasks
+    }
+    
+    /**
+     * 更新待办队列
+     */
+    fun updatePendingQueue(tasks: List<PendingTask>) {
+        val queue = JSONArray()
+        tasks.forEach {
+            queue.put(JSONObject()
+                .put("priority", it.priority)
+                .put("tag", it.tag)
+                .put("addTime", it.addTime))
+        }
+        prefs.edit().putString("pending_queue", queue.toString()).apply()
+    }
+    
+    /**
+     * 清空待办队列
+     */
+    fun clearPendingQueue() {
+        prefs.edit().putString("pending_queue", "[]").apply()
+    }
+    
+    // ==================== 日期管理 ====================
+    
+    /**
+     * 获取上次记录的日期
+     */
+    fun getLastDate(): String {
+        return prefs.getString("last_date", "") ?: ""
+    }
+    
+    /**
+     * 更新最后日期
+     */
+    fun updateLastDate(date: String) {
+        prefs.edit().putString("last_date", date).apply()
+    }
+    
+    /**
+     * 获取今天的日期字符串
+     */
+    fun getTodayDate(): String {
+        return dateFormat.format(Date())
+    }
+}
+
