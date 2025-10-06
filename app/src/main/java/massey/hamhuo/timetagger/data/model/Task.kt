@@ -4,7 +4,7 @@ package massey.hamhuo.timetagger.data.model
  * 任务数据模型
  */
 data class Task(
-    val priority: Int,  // 0=P0重要紧急, 1=P1重要不紧急, 2=P2紧急不重要, 3=P3不重要不紧急
+    val priority: Int,  // 0=P0突发, 1=P1核心, 2=P2短期
     val tag: String,
     val timestamp: Long = System.currentTimeMillis()
 )

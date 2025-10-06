@@ -7,8 +7,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -201,7 +203,7 @@ private fun MainScreen(
                 priority = currentPriority,
                 isResting = isResting,
                 restTimeLeft = restTimeLeft,
-                onDoubleClick = {
+                onComplete = {
                     viewModel.completeTask()
                     viewModel.stopTaskRest() // 完成任务时停止休息
                     currentTag = ""
@@ -281,14 +283,40 @@ private fun TaskDisplay(
     priority: Int,
     isResting: Boolean,
     restTimeLeft: Long,
-    onDoubleClick: () -> Unit,
+    onComplete: () -> Unit,
     onLongPress: () -> Unit,
     onRestClick: () -> Unit = {}
 ) {
-    var lastClickTime by remember { mutableStateOf(0L) }
+    var offsetX by remember { mutableStateOf(0f) }
     
     Box(
-        modifier = Modifier.height(70.dp),
+        modifier = Modifier
+            .height(70.dp)
+            .offset { androidx.compose.ui.unit.IntOffset(offsetX.toInt(), 0) }
+            .pointerInput(tag, priority) {
+                detectDragGestures(
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        // 只允许左滑
+                        if (dragAmount.x < 0) {
+                            offsetX = (offsetX + dragAmount.x).coerceAtLeast(-200f)
+                        } else if (offsetX < 0) {
+                            // 右滑恢复
+                            offsetX = (offsetX + dragAmount.x).coerceAtMost(0f)
+                        }
+                    },
+                    onDragEnd = {
+                        // 如果左滑超过80像素，完成任务
+                        if (offsetX < -80f && tag.isNotEmpty() && priority >= 0) {
+                            onComplete()
+                            offsetX = 0f
+                        } else {
+                            // 否则恢复原位
+                            offsetX = 0f
+                        }
+                    }
+                )
+            },
         contentAlignment = Alignment.TopCenter
     ) {
         if (tag.isNotEmpty() && priority >= 0) {
@@ -330,22 +358,40 @@ private fun TaskDisplay(
                 }
             } else {
                 // 正常工作：显示任务标签
-                val config = PriorityConfigs.get(priority)!!
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Top
-                ) {
-                    Box(
+                val config = PriorityConfigs.get(priority)
+                if (config != null) {
+                    Column(
                         modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(config.color)
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Top
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(config.color)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        
+                        Text(
+                            text = tag,
+                            fontSize = 16.sp,
+                            lineHeight = 20.sp,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.pointerInput(Unit) {
+                                detectTapGestures(
+                                    onLongPress = { onLongPress() }
+                                )
+                            }
+                        )
+                    }
+                } else {
+                    // 优先级无效（比如旧的P3数据），只显示文字
                     Text(
                         text = tag,
                         fontSize = 16.sp,
@@ -354,17 +400,10 @@ private fun TaskDisplay(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         fontWeight = FontWeight.Medium,
+                        color = Color.Gray,
                         modifier = Modifier.pointerInput(Unit) {
                             detectTapGestures(
-                                onLongPress = { onLongPress() },
-                                onTap = {
-                                    val now = System.currentTimeMillis()
-                                    if (now - lastClickTime < 500) {
-                                        // 双击完成
-                                        onDoubleClick()
-                                    }
-                                    lastClickTime = now
-                                }
+                                onLongPress = { onLongPress() }
                             )
                         }
                     )

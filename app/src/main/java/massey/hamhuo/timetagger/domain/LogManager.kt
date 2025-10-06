@@ -81,10 +81,9 @@ class LogManager(
      */
     private fun getPriorityName(priority: Int): String {
         return when (priority) {
-            0 -> "P0-重要且紧急"
-            1 -> "P1-重要不紧急"
-            2 -> "P2-紧急不重要"
-            3 -> "P3-不重要不紧急"
+            0 -> "P0-突发"
+            1 -> "P1-核心"
+            2 -> "P2-短期"
             else -> "未分类"
         }
     }

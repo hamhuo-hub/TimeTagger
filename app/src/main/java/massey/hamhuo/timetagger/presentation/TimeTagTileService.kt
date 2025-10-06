@@ -39,9 +39,9 @@ class TimeTagTileService : TileService() {
 
     private val priorityConfigs = mapOf(
         0 to PriorityConfig(0xFFEF5350.toInt(), "突发", "Important & Urgent"),
-        1 to PriorityConfig(0xFF42A5F5.toInt(), "重要任务", "Important"),
-        2 to PriorityConfig(0xFFFFCA28.toInt(), "紧急任务", "Urgent"),
-        3 to PriorityConfig(0xFF78909C.toInt(), "休息", "Neither")
+        1 to PriorityConfig(0xFF42A5F5.toInt(), "核心", "Core"),
+        2 to PriorityConfig(0xFFFFCA28.toInt(), "短期", "Urgent"),
+//        3 to PriorityConfig(0xFF78909C.toInt(), "休息", "Neither")
     )
 
     override fun onTileRequest(requestParams: RequestBuilders.TileRequest): ListenableFuture<TileBuilders.Tile> {
