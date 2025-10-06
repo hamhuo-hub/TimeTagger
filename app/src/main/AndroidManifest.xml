@@ -52,29 +52,6 @@
                 android:resource="@drawable/tile_preview" />
         </service>
 
-        <!-- Watch Face Service - 独立进程运行 -->
-        <service
-            android:name=".presentation.TimeTagWatchFaceService"
-            android:exported="true"
-            android:label="TimeTag"
-            android:permission="android.permission.BIND_WALLPAPER"
-            android:process=":watchface">
-            <intent-filter>
-                <action android:name="android.service.wallpaper.WallpaperService" />
-                <category android:name="com.google.android.wearable.watchface.category.WATCH_FACE" />
-            </intent-filter>
-            <!-- 必需的表盘配置 -->
-            <meta-data
-                android:name="android.service.wallpaper"
-                android:resource="@xml/watch_face" />
-            <meta-data
-                android:name="com.google.android.wearable.watchface.preview"
-                android:resource="@drawable/watchface_preview" />
-            <meta-data
-                android:name="com.google.android.wearable.watchface.preview_circular"
-                android:resource="@drawable/watchface_preview_circular" />
-        </service>
-
         <!-- Rest Alarm Receiver -->
         <receiver
             android:name=".presentation.RestAlarmReceiver"

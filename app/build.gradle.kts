@@ -91,18 +91,8 @@ dependencies {
     
     // 只导入需要的图标，不使用 extended
     implementation("androidx.compose.material:material-icons-core")
-    
     implementation("androidx.wear.tiles:tiles:1.2.0")
     implementation("androidx.wear.tiles:tiles-material:1.2.0")
-    
-    // Guava - listenablefuture 已在全局配置中排除
     implementation("com.google.guava:guava:31.1-android")
-    
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose")
-    
-    // Watch Face dependencies - 所有都需要，否则服务无法正常绑定
-    implementation("androidx.wear.watchface:watchface:1.2.1")
-    implementation("androidx.wear.watchface:watchface-complications-data-source:1.2.1")
-    implementation("androidx.wear.watchface:watchface-editor:1.2.1")
-    implementation("androidx.wear.watchface:watchface-style:1.2.1")
 }

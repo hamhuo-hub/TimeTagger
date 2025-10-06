@@ -20,18 +20,35 @@ import androidx.wear.tiles.TileService
 import androidx.wear.protolayout.TimelineBuilders
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import massey.hamhuo.timetagger.data.storage.CrossProcessDataReader
-import massey.hamhuo.timetagger.util.DateFormatter
 import java.util.*
 
 class TimeTagTileService : TileService() {
 
-    // 使用跨进程数据读取器，独立于主应用进程
-    private val dataReader: CrossProcessDataReader? by lazy {
-        try {
-            CrossProcessDataReader(applicationContext)
+    // 直接读取文件，避免初始化延迟
+    private fun getCurrentTask(): massey.hamhuo.timetagger.data.model.CurrentTask {
+        return try {
+            val file = java.io.File(applicationContext.filesDir, "current_task.txt")
+            if (!file.exists()) {
+                return massey.hamhuo.timetagger.data.model.CurrentTask.empty()
+            }
+            
+            val data = file.readText()
+            if (data.isEmpty()) {
+                return massey.hamhuo.timetagger.data.model.CurrentTask.empty()
+            }
+            
+            val parts = data.split("|")
+            if (parts.size < 2) {
+                return massey.hamhuo.timetagger.data.model.CurrentTask.empty()
+            }
+            
+            val priority = parts[0].toIntOrNull() ?: -1
+            val tag = parts.getOrNull(1) ?: ""
+            val restTime = parts.getOrNull(2)?.toLongOrNull() ?: 0L
+            
+            massey.hamhuo.timetagger.data.model.CurrentTask(priority, tag, restTime)
         } catch (e: Exception) {
-            null
+            massey.hamhuo.timetagger.data.model.CurrentTask.empty()
         }
     }
 
@@ -50,20 +67,12 @@ class TimeTagTileService : TileService() {
 
     override fun onTileRequest(requestParams: RequestBuilders.TileRequest): ListenableFuture<TileBuilders.Tile> {
         return try {
-            // 快速返回，带容错处理
-            val timeStr = try {
-                DateFormatter.getCurrentTime()
-            } catch (e: Exception) {
-                val cal = Calendar.getInstance()
-                String.format("%02d:%02d", cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE))
-            }
+            // 使用最简单的时间获取方式
+            val cal = Calendar.getInstance()
+            val timeStr = String.format("%02d:%02d", cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE))
             
-            val currentTask = try {
-                dataReader?.getCurrentTask() ?: massey.hamhuo.timetagger.data.model.CurrentTask.empty()
-            } catch (e: Exception) {
-                massey.hamhuo.timetagger.data.model.CurrentTask.empty()
-            }
-            
+            // 直接读取文件，极速返回
+            val currentTask = getCurrentTask()
             val lastTag = currentTask.tag
             val lastPriority = currentTask.priority
 
@@ -89,27 +98,32 @@ class TimeTagTileService : TileService() {
 
             Futures.immediateFuture(tile)
         } catch (e: Exception) {
-            e.printStackTrace()
-            // 返回一个简单的默认 Tile
-            val defaultRoot = createDefaultTile()
-            val defaultTile = TileBuilders.Tile.Builder()
-                .setResourcesVersion(RES_VERSION)
-                .setFreshnessIntervalMillis(60_000)
-                .setTileTimeline(
-                    TimelineBuilders.Timeline.Builder()
-                        .addTimelineEntry(
-                            TimelineBuilders.TimelineEntry.Builder()
-                                .setLayout(
-                                    LayoutElementBuilders.Layout.Builder()
-                                        .setRoot(defaultRoot)
-                                        .build()
-                                )
-                                .build()
-                        )
-                        .build()
-                )
-                .build()
-            Futures.immediateFuture(defaultTile)
+            // 发生任何错误，立即返回最简单的Tile
+            try {
+                val simpleTile = TileBuilders.Tile.Builder()
+                    .setResourcesVersion(RES_VERSION)
+                    .setFreshnessIntervalMillis(60_000)
+                    .setTileTimeline(
+                        TimelineBuilders.Timeline.Builder()
+                            .addTimelineEntry(
+                                TimelineBuilders.TimelineEntry.Builder()
+                                    .setLayout(
+                                        LayoutElementBuilders.Layout.Builder()
+                                            .setRoot(createDefaultTile())
+                                            .build()
+                                    )
+                                    .build()
+                            )
+                            .build()
+                    )
+                    .build()
+                Futures.immediateFuture(simpleTile)
+            } catch (e2: Exception) {
+                // 最后的兜底
+                Futures.immediateFuture(TileBuilders.Tile.Builder()
+                    .setResourcesVersion(RES_VERSION)
+                    .build())
+            }
         }
     }
 
