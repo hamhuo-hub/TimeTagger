@@ -10,11 +10,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Timer
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -338,12 +336,6 @@ private fun TaskDisplay(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Filled.Timer,
-                                contentDescription = "休息",
-                                modifier = Modifier.size(16.dp),
-                                tint = Color.White
-                            )
                             Spacer(Modifier.width(4.dp))
                             val minutes = (restTimeLeft / 1000 / 60).toInt()
                             val seconds = (restTimeLeft / 1000 % 60).toInt()

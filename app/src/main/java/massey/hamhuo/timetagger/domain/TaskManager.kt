@@ -18,11 +18,11 @@ class TaskManager(private val repository: TimeTrackerRepository) {
         val currentTask = repository.getCurrentTask()
         val currentPriority = currentTask.priority
         
-        // 如果当前有任务且新任务优先级更低，加入待办队列
-        if (currentPriority >= 0 && priority > currentPriority) {
+        // 如果当前有任务且新任务优先级相同或更低，加入待办队列
+        if (currentPriority >= 0 && priority >= currentPriority) {
             repository.addToPendingQueue(Task(priority, label))
         } else {
-            // 直接开始任务
+            // 只有新任务优先级更高时，才直接开始（打断当前任务）
             startTask(priority, label)
         }
     }

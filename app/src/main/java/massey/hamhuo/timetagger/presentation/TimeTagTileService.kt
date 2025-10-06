@@ -20,14 +20,19 @@ import androidx.wear.tiles.TileService
 import androidx.wear.protolayout.TimelineBuilders
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
-import massey.hamhuo.timetagger.data.repository.TimeTrackerRepository
+import massey.hamhuo.timetagger.data.storage.CrossProcessDataReader
 import massey.hamhuo.timetagger.util.DateFormatter
 import java.util.*
 
 class TimeTagTileService : TileService() {
 
-    private val repository by lazy {
-        TimeTrackerRepository(applicationContext)
+    // 使用跨进程数据读取器，独立于主应用进程
+    private val dataReader: CrossProcessDataReader? by lazy {
+        try {
+            CrossProcessDataReader(applicationContext)
+        } catch (e: Exception) {
+            null
+        }
     }
 
     // 优先级配置
@@ -40,14 +45,25 @@ class TimeTagTileService : TileService() {
     private val priorityConfigs = mapOf(
         0 to PriorityConfig(0xFFEF5350.toInt(), "突发", "Important & Urgent"),
         1 to PriorityConfig(0xFF42A5F5.toInt(), "核心", "Core"),
-        2 to PriorityConfig(0xFFFFCA28.toInt(), "短期", "Urgent"),
-//        3 to PriorityConfig(0xFF78909C.toInt(), "休息", "Neither")
+        2 to PriorityConfig(0xFFFFCA28.toInt(), "短期", "Urgent")
     )
 
     override fun onTileRequest(requestParams: RequestBuilders.TileRequest): ListenableFuture<TileBuilders.Tile> {
         return try {
-            val timeStr = DateFormatter.getCurrentTime()
-            val currentTask = repository.getCurrentTask()
+            // 快速返回，带容错处理
+            val timeStr = try {
+                DateFormatter.getCurrentTime()
+            } catch (e: Exception) {
+                val cal = Calendar.getInstance()
+                String.format("%02d:%02d", cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE))
+            }
+            
+            val currentTask = try {
+                dataReader?.getCurrentTask() ?: massey.hamhuo.timetagger.data.model.CurrentTask.empty()
+            } catch (e: Exception) {
+                massey.hamhuo.timetagger.data.model.CurrentTask.empty()
+            }
+            
             val lastTag = currentTask.tag
             val lastPriority = currentTask.priority
 

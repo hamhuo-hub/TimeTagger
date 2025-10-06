@@ -14,15 +14,42 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-
+        
+        // 只保留需要的密度资源
+        vectorDrawables {
+            useSupportLibrary = true
+        }
+        
+        // 只保留中文和英文
+        resourceConfigurations += listOf("zh", "en")
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // 启用代码压缩和混淆
+            isMinifyEnabled = true
+            // 启用资源压缩
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
+            )
+        }
+    }
+    
+    // 优化打包配置
+    packagingOptions {
+        resources {
+            excludes += listOf(
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/license.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt",
+                "META-INF/notice.txt",
+                "META-INF/ASL2.0",
+                "META-INF/*.kotlin_module"
             )
         }
     }
@@ -39,6 +66,11 @@ android {
     }
 }
 
+configurations.all {
+    // 全局排除 listenablefuture，避免与 Guava 冲突
+    exclude(group = "com.google.guava", module = "listenablefuture")
+}
+
 dependencies {
 
     implementation(libs.play.services.wearable)
@@ -51,21 +83,26 @@ dependencies {
     implementation(libs.wear.tooling.preview)
     implementation(libs.activity.compose)
     implementation(libs.core.splashscreen)
-    implementation(libs.firebase.crashlytics.buildtools)
     implementation(libs.wear.remote.interactions)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.ui.test.junit4)
     debugImplementation(libs.ui.tooling)
     debugImplementation(libs.ui.test.manifest)
-    implementation("androidx.compose.material:material-icons-extended")
+    
+    // 只导入需要的图标，不使用 extended
+    implementation("androidx.compose.material:material-icons-core")
+    
     implementation("androidx.wear.tiles:tiles:1.2.0")
     implementation("androidx.wear.tiles:tiles-material:1.2.0")
+    
+    // Guava - listenablefuture 已在全局配置中排除
     implementation("com.google.guava:guava:31.1-android")
+    
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose")
     
-    // Watch Face dependencies
+    // Watch Face dependencies - 所有都需要，否则服务无法正常绑定
     implementation("androidx.wear.watchface:watchface:1.2.1")
     implementation("androidx.wear.watchface:watchface-complications-data-source:1.2.1")
-    implementation("androidx.wear.watchface:watchface-complications-rendering:1.2.1")
+    implementation("androidx.wear.watchface:watchface-editor:1.2.1")
     implementation("androidx.wear.watchface:watchface-style:1.2.1")
 }

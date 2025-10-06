@@ -1,5 +1,7 @@
 package massey.hamhuo.timetagger.presentation
 
+import android.app.PendingIntent
+import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -7,14 +9,17 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.text.TextPaint
 import android.view.SurfaceHolder
+import androidx.compose.ui.graphics.toArgb
 import androidx.wear.watchface.CanvasType
 import androidx.wear.watchface.ComplicationSlotsManager
+import androidx.wear.watchface.TapEvent
+import androidx.wear.watchface.TapType
 import androidx.wear.watchface.WatchFace
 import androidx.wear.watchface.WatchFaceService
 import androidx.wear.watchface.WatchFaceType
 import androidx.wear.watchface.WatchState
 import androidx.wear.watchface.style.CurrentUserStyleRepository
-import massey.hamhuo.timetagger.data.repository.TimeTrackerRepository
+import massey.hamhuo.timetagger.data.storage.CrossProcessDataReader
 import massey.hamhuo.timetagger.util.DateFormatter
 import massey.hamhuo.timetagger.util.PriorityConfigs
 import java.time.ZonedDateTime
@@ -43,7 +48,30 @@ class TimeTagWatchFaceService : WatchFaceService() {
         return WatchFace(
             watchFaceType = WatchFaceType.DIGITAL,
             renderer = renderer
-        )
+        ).apply {
+            // 设置点击监听器
+            setTapListener(object : WatchFace.TapListener {
+                override fun onTapEvent(tapType: Int, tapEvent: TapEvent, complicationSlot: androidx.wear.watchface.ComplicationSlot?) {
+                    if (tapType == TapType.UP) {
+                        // 点击表盘时打开应用
+                        val intent = Intent(applicationContext, MainActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        }
+                        val pendingIntent = PendingIntent.getActivity(
+                            applicationContext,
+                            0,
+                            intent,
+                            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                        )
+                        try {
+                            pendingIntent.send()
+                        } catch (e: Exception) {
+                            // 忽略异常
+                        }
+                    }
+                }
+            })
+        }
     }
 }
 
@@ -64,7 +92,14 @@ private class TimeTagRenderer(
     16L // 16ms = 60fps
 ) {
     
-    private val repository = TimeTrackerRepository(context)
+    // 使用跨进程数据读取器
+    private val dataReader: CrossProcessDataReader? by lazy {
+        try {
+            CrossProcessDataReader(context)
+        } catch (e: Exception) {
+            null
+        }
+    }
     
     // 画笔
     private val backgroundPaint = Paint().apply {
@@ -113,11 +148,19 @@ private class TimeTagRenderer(
         val centerX = bounds.exactCenterX()
         val centerY = bounds.exactCenterY()
         
-        // 获取当前时间
-        val timeStr = DateFormatter.getCurrentTime()
+        // 获取当前时间（带容错）
+        val timeStr = try {
+            DateFormatter.getCurrentTime()
+        } catch (e: Exception) {
+            String.format("%02d:%02d", zonedDateTime.hour, zonedDateTime.minute)
+        }
         
-        // 获取当前任务
-        val currentTask = repository.getCurrentTask()
+        // 获取当前任务（使用跨进程读取器，独立于主应用进程）
+        val currentTask = try {
+            dataReader?.getCurrentTask() ?: massey.hamhuo.timetagger.data.model.CurrentTask.empty()
+        } catch (e: Exception) {
+            massey.hamhuo.timetagger.data.model.CurrentTask.empty()
+        }
         
         // 绘制时间
         canvas.drawText(timeStr, centerX, centerY - 20f, timePaint)
@@ -133,7 +176,7 @@ private class TimeTagRenderer(
                 val labelHeight = 36f
                 val labelTop = centerY + 30f
                 
-                priorityBgPaint.color = config.color.hashCode()
+                priorityBgPaint.color = config.color.toArgb()
                 val labelRect = RectF(
                     centerX - labelWidth / 2,
                     labelTop,
@@ -164,7 +207,7 @@ private class TimeTagRenderer(
             }
         } else {
             // 无任务时显示提示
-            canvas.drawText("Tap to start task", centerX, centerY + 50f, hintPaint)
+            canvas.drawText("点击进入应用", centerX, centerY + 50f, hintPaint)
         }
         
         // 在环境模式下降低亮度

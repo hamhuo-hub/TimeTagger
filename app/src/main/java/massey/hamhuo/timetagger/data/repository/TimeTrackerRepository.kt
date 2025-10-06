@@ -6,6 +6,7 @@ import massey.hamhuo.timetagger.data.model.CurrentTask
 import massey.hamhuo.timetagger.data.model.PendingTask
 import massey.hamhuo.timetagger.data.model.Task
 import massey.hamhuo.timetagger.data.model.TimeRecord
+import massey.hamhuo.timetagger.data.storage.CrossProcessDataReader
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -14,11 +15,13 @@ import java.util.*
 /**
  * 时间追踪数据仓库
  * 负责所有数据的持久化操作
+ * 主应用进程使用，同时通过CrossProcessDataReader同步数据给表盘和Tile进程
  */
 class TimeTrackerRepository(context: Context) {
     
+    private val appContext = context.applicationContext
     private val prefs: SharedPreferences = 
-        context.getSharedPreferences("time_tracker", Context.MODE_PRIVATE)
+        appContext.getSharedPreferences("time_tracker", Context.MODE_PRIVATE)
     
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
     
@@ -35,10 +38,23 @@ class TimeTrackerRepository(context: Context) {
     }
     
     /**
+     * 同步当前任务到文件（供跨进程访问）
+     */
+    private fun syncCurrentTaskToFile() {
+        try {
+            val task = getCurrentTask()
+            CrossProcessDataReader.saveCurrentTask(appContext, task)
+        } catch (e: Exception) {
+            // 忽略错误，不影响主流程
+        }
+    }
+    
+    /**
      * 更新当前任务标签
      */
     fun updateCurrentTaskTag(tag: String) {
         prefs.edit().putString("last_tag", tag).apply()
+        syncCurrentTaskToFile()
     }
     
     /**
@@ -50,6 +66,7 @@ class TimeTrackerRepository(context: Context) {
             .putInt("last_priority", -1)
             .putLong("current_rest_time", 0)
             .apply()
+        syncCurrentTaskToFile()
     }
     
     /**
@@ -58,6 +75,7 @@ class TimeTrackerRepository(context: Context) {
     fun addRestTimeToCurrentTask(restMillis: Long) {
         val currentRestTime = prefs.getLong("current_rest_time", 0)
         prefs.edit().putLong("current_rest_time", currentRestTime + restMillis).apply()
+        syncCurrentTaskToFile()
     }
     
     /**
@@ -111,6 +129,7 @@ class TimeTrackerRepository(context: Context) {
             .putString("last_date", day)
             .putLong("current_rest_time", 0)  // 新任务开始，重置休息时间
             .apply()
+        syncCurrentTaskToFile()
     }
     
     /**
@@ -141,6 +160,7 @@ class TimeTrackerRepository(context: Context) {
             .putString(key, arr.toString())
             .putLong("current_rest_time", 0)
             .apply()
+        syncCurrentTaskToFile()
     }
     
     /**
