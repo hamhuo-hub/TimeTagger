@@ -67,6 +67,27 @@ class TimeTrackerRepository(context: Context) {
         return prefs.getLong("current_rest_time", 0)
     }
     
+    /**
+     * 保存休息开始时间
+     */
+    fun setRestStartTime(timestamp: Long) {
+        prefs.edit().putLong("rest_start_time", timestamp).apply()
+    }
+    
+    /**
+     * 获取休息开始时间（0表示没有在休息）
+     */
+    fun getRestStartTime(): Long {
+        return prefs.getLong("rest_start_time", 0)
+    }
+    
+    /**
+     * 清除休息开始时间
+     */
+    fun clearRestStartTime() {
+        prefs.edit().putLong("rest_start_time", 0).apply()
+    }
+    
     // ==================== 任务事件 ====================
     
     /**

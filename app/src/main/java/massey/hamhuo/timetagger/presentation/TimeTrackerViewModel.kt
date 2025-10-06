@@ -1,7 +1,9 @@
 package massey.hamhuo.timetagger.presentation
 
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.content.Context
-import android.os.CountDownTimer
+import android.content.Intent
 import android.os.VibrationEffect
 import android.os.Vibrator
 import androidx.lifecycle.ViewModel
@@ -16,6 +18,11 @@ import massey.hamhuo.timetagger.data.repository.TimeTrackerRepository
 import massey.hamhuo.timetagger.domain.DailyResetManager
 import massey.hamhuo.timetagger.domain.LogManager
 import massey.hamhuo.timetagger.domain.TaskManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * 时间追踪ViewModel
@@ -45,18 +52,44 @@ class TimeTrackerViewModel(
     private val _restTimeLeft = MutableStateFlow(0L)
     val restTimeLeft: StateFlow<Long> = _restTimeLeft.asStateFlow()
     
-    private var restTimer: CountDownTimer? = null
+    private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
     private val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    private var updateJob: Job? = null
+    private val viewModelScope = CoroutineScope(Dispatchers.Main)
+    
+    private val REST_DURATION = 5 * 60 * 1000L // 5分钟
     
     init {
         // 初始化时检查日期
         dailyResetManager.checkAndResetDaily()
         refreshState()
+        // 检查是否有未完成的休息
+        checkRestoreRestState()
     }
     
     override fun onCleared() {
         super.onCleared()
-        restTimer?.cancel()
+        updateJob?.cancel()
+    }
+    
+    /**
+     * 检查并恢复休息状态
+     */
+    private fun checkRestoreRestState() {
+        val restStartTime = repository.getRestStartTime()
+        if (restStartTime > 0) {
+            val elapsed = System.currentTimeMillis() - restStartTime
+            if (elapsed < REST_DURATION) {
+                // 休息还没结束，恢复倒计时显示
+                _isResting.value = true
+                startRestTimeUpdate()
+            } else {
+                // 休息已经结束，清理状态
+                repository.clearRestStartTime()
+                _isResting.value = false
+                _restTimeLeft.value = 0L
+            }
+        }
     }
     
     /**
@@ -119,25 +152,31 @@ class TimeTrackerViewModel(
         // 只有在有任务进行时才能休息
         if (_currentTask.value.priority < 0 || _isResting.value) return
         
-        _isResting.value = true
-        _restTimeLeft.value = 5 * 60 * 1000L // 5分钟
+        val restStartTime = System.currentTimeMillis()
+        repository.setRestStartTime(restStartTime)
         
-        restTimer?.cancel()
-        restTimer = object : CountDownTimer(5 * 60 * 1000L, 1000L) {
-            override fun onTick(millisUntilFinished: Long) {
-                _restTimeLeft.value = millisUntilFinished
-            }
-            
-            override fun onFinish() {
-                _isResting.value = false
-                _restTimeLeft.value = 0L
-                // 记录5分钟休息时间
-                repository.addRestTimeToCurrentTask(5 * 60 * 1000L)
-                refreshState()
-                // 振动提醒继续工作
-                vibrateNotification()
-            }
-        }.start()
+        _isResting.value = true
+        _restTimeLeft.value = REST_DURATION
+        
+        // 使用AlarmManager设置5分钟后的闹钟
+        val intent = Intent(context, RestAlarmReceiver::class.java).apply {
+            action = RestAlarmReceiver.ACTION_REST_FINISHED
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            restStartTime + REST_DURATION,
+            pendingIntent
+        )
+        
+        // 启动UI更新
+        startRestTimeUpdate()
     }
     
     /**
@@ -145,16 +184,69 @@ class TimeTrackerViewModel(
      */
     fun stopTaskRest() {
         if (_isResting.value) {
-            // 计算已休息的时间
-            val restedTime = 5 * 60 * 1000L - _restTimeLeft.value
-            if (restedTime > 0) {
-                repository.addRestTimeToCurrentTask(restedTime)
-                refreshState()
+            val restStartTime = repository.getRestStartTime()
+            if (restStartTime > 0) {
+                // 计算已休息的时间
+                val restedTime = System.currentTimeMillis() - restStartTime
+                if (restedTime > 0) {
+                    repository.addRestTimeToCurrentTask(restedTime)
+                    refreshState()
+                }
             }
+            
+            // 取消AlarmManager
+            cancelRestAlarm()
         }
-        restTimer?.cancel()
+        
+        repository.clearRestStartTime()
+        updateJob?.cancel()
         _isResting.value = false
         _restTimeLeft.value = 0L
+    }
+    
+    /**
+     * 开始更新休息时间显示
+     */
+    private fun startRestTimeUpdate() {
+        updateJob?.cancel()
+        updateJob = viewModelScope.launch {
+            while (_isResting.value) {
+                val restStartTime = repository.getRestStartTime()
+                if (restStartTime > 0) {
+                    val elapsed = System.currentTimeMillis() - restStartTime
+                    val remaining = REST_DURATION - elapsed
+                    
+                    if (remaining > 0) {
+                        _restTimeLeft.value = remaining
+                        delay(1000) // 每秒更新一次
+                    } else {
+                        // 时间到了
+                        _isResting.value = false
+                        _restTimeLeft.value = 0L
+                        repository.clearRestStartTime()
+                        break
+                    }
+                } else {
+                    break
+                }
+            }
+        }
+    }
+    
+    /**
+     * 取消休息闹钟
+     */
+    private fun cancelRestAlarm() {
+        val intent = Intent(context, RestAlarmReceiver::class.java).apply {
+            action = RestAlarmReceiver.ACTION_REST_FINISHED
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(pendingIntent)
     }
     
     /**
