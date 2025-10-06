@@ -14,12 +14,13 @@ data class Task(
  */
 data class CurrentTask(
     val priority: Int,
-    val tag: String
+    val tag: String,
+    val restTime: Long = 0  // 已休息时间（毫秒）
 ) {
     fun isEmpty(): Boolean = tag.isEmpty() || priority < 0
     
     companion object {
-        fun empty() = CurrentTask(-1, "")
+        fun empty() = CurrentTask(-1, "", 0)
     }
 }
 
@@ -39,6 +40,7 @@ data class TimeRecord(
     val start: Long,
     val end: Long,
     val tag: String,
-    val priority: Int
+    val priority: Int,
+    val restTime: Long = 0  // 休息时间（毫秒）
 )
 

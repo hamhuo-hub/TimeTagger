@@ -17,11 +17,12 @@ import kotlin.math.sqrt
 
 /**
  * 优先级弧形环组件
- * 显示四个优先级区域并处理点击
+ * 显示三个优先级区域和一个休息按钮
  */
 @Composable
 fun PriorityArcRing(
     onPriorityClick: (Int) -> Unit,
+    onRestClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -42,14 +43,12 @@ fun PriorityArcRing(
                         var angle = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat()
                         if (angle < 0) angle += 360f
                         
-                        val priority = when {
-                            angle >= 315f || angle < 45f -> 1  // 右侧 P1
-                            angle >= 45f && angle < 135f -> 2  // 下方 P2
-                            angle >= 135f && angle < 225f -> 3 // 左侧 P3
-                            else -> 0                           // 上方 P0
+                        when {
+                            angle >= 315f || angle < 45f -> onPriorityClick(1)  // 右侧 P1
+                            angle >= 45f && angle < 135f -> onPriorityClick(2)  // 下方 P2
+                            angle >= 135f && angle < 225f -> onRestClick()      // 左侧 休息按钮
+                            else -> onPriorityClick(0)                           // 上方 P0
                         }
-                        
-                        onPriorityClick(priority)
                     }
                 }
             }
@@ -95,9 +94,9 @@ fun PriorityArcRing(
                 style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
             )
             
-            // P3 - 左下 (135° - 225°)
+            // 休息按钮 - 左下 (135° - 225°)，使用灰色
             drawArc(
-                color = PriorityConfigs.get(3)!!.color,
+                color = androidx.compose.ui.graphics.Color(0xFF78909C),
                 startAngle = 135f,
                 sweepAngle = 90f,
                 useCenter = false,

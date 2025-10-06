@@ -30,7 +30,8 @@ class TimeTrackerRepository(context: Context) {
     fun getCurrentTask(): CurrentTask {
         val tag = prefs.getString("last_tag", "") ?: ""
         val priority = prefs.getInt("last_priority", -1)
-        return CurrentTask(priority, tag)
+        val restTime = prefs.getLong("current_rest_time", 0)
+        return CurrentTask(priority, tag, restTime)
     }
     
     /**
@@ -47,7 +48,23 @@ class TimeTrackerRepository(context: Context) {
         prefs.edit()
             .putString("last_tag", "")
             .putInt("last_priority", -1)
+            .putLong("current_rest_time", 0)
             .apply()
+    }
+    
+    /**
+     * 添加休息时间到当前任务
+     */
+    fun addRestTimeToCurrentTask(restMillis: Long) {
+        val currentRestTime = prefs.getLong("current_rest_time", 0)
+        prefs.edit().putLong("current_rest_time", currentRestTime + restMillis).apply()
+    }
+    
+    /**
+     * 获取当前任务的休息时间
+     */
+    fun getCurrentRestTime(): Long {
+        return prefs.getLong("current_rest_time", 0)
     }
     
     // ==================== 任务事件 ====================
@@ -71,6 +88,7 @@ class TimeTrackerRepository(context: Context) {
             .putString("last_tag", task.tag)
             .putInt("last_priority", task.priority)
             .putString("last_date", day)
+            .putLong("current_rest_time", 0)  // 新任务开始，重置休息时间
             .apply()
     }
     
@@ -82,12 +100,26 @@ class TimeTrackerRepository(context: Context) {
         val key = "events_$day"
         val arr = JSONArray(prefs.getString(key, "[]"))
         
+        // 保存当前任务的休息时间到最后一个任务事件
+        val currentRestTime = prefs.getLong("current_rest_time", 0)
+        if (arr.length() > 0) {
+            val lastIndex = arr.length() - 1
+            val lastEvent = arr.getJSONObject(lastIndex)
+            if (lastEvent.optString("tag").isNotEmpty()) {
+                lastEvent.put("restTime", currentRestTime)
+                arr.put(lastIndex, lastEvent)
+            }
+        }
+        
         arr.put(JSONObject()
             .put("ts", timestamp)
             .put("tag", "")
             .put("priority", -1))
         
-        prefs.edit().putString(key, arr.toString()).apply()
+        prefs.edit()
+            .putString(key, arr.toString())
+            .putLong("current_rest_time", 0)
+            .apply()
     }
     
     /**
@@ -104,13 +136,15 @@ class TimeTrackerRepository(context: Context) {
         if (arr.length() == 0) return emptyList()
         
         val records = mutableListOf<TimeRecord>()
-        val hasCurrentTask = getCurrentTask().tag.isNotEmpty()
+        val currentTask = getCurrentTask()
+        val hasCurrentTask = currentTask.tag.isNotEmpty()
         
         for (i in 0 until arr.length()) {
             val cur = arr.getJSONObject(i)
             val start = cur.optLong("ts")
             val tag = cur.optString("tag")
             val priority = cur.optInt("priority", -1)
+            val restTime = cur.optLong("restTime", 0)
             
             if (tag.isEmpty()) continue
             
@@ -120,7 +154,14 @@ class TimeTrackerRepository(context: Context) {
                 if (hasCurrentTask) System.currentTimeMillis() else start + 60000
             }
             
-            records += TimeRecord(start, end, tag, priority)
+            // 如果是当前任务，使用实时休息时间
+            val finalRestTime = if (hasCurrentTask && i == arr.length() - 1) {
+                currentTask.restTime
+            } else {
+                restTime
+            }
+            
+            records += TimeRecord(start, end, tag, priority, finalRestTime)
         }
         return records
     }

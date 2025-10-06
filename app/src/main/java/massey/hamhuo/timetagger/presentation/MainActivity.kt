@@ -102,6 +102,10 @@ private fun MainScreen(
     var pendingPriority by remember { mutableStateOf(-1) }
     val context = LocalContext.current
     
+    // 休息状态
+    val isResting by viewModel.isResting.collectAsState()
+    val restTimeLeft by viewModel.restTimeLeft.collectAsState()
+    
     // 语音输入管理器
     val voiceInputManager = remember { VoiceInputManager(context) }
     
@@ -151,8 +155,20 @@ private fun MainScreen(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        // 优先级圆环
-        PriorityArcRing(onPriorityClick = { priority -> startVoiceInput(priority) })
+        // 优先级圆环（P3改为休息按钮）
+        PriorityArcRing(
+            onPriorityClick = { priority -> startVoiceInput(priority) },
+            onRestClick = {
+                // 只有在有任务时才能休息
+                if (currentTag.isNotEmpty() && currentPriority >= 0) {
+                    if (isResting) {
+                        viewModel.stopTaskRest()
+                    } else {
+                        viewModel.startTaskRest()
+                    }
+                }
+            }
+        )
         
         // 中央内容区
         Column(
@@ -182,8 +198,11 @@ private fun MainScreen(
             TaskDisplay(
                 tag = currentTag,
                 priority = currentPriority,
+                isResting = isResting,
+                restTimeLeft = restTimeLeft,
                 onDoubleClick = {
                     viewModel.completeTask()
+                    viewModel.stopTaskRest() // 完成任务时停止休息
                     currentTag = ""
                     currentPriority = -1
                     refreshTrigger++
@@ -191,6 +210,9 @@ private fun MainScreen(
                 },
                 onLongPress = {
                     startVoiceInput(currentPriority, isEdit = true)
+                },
+                onRestClick = {
+                    viewModel.stopTaskRest() // 点击倒计时器提前结束休息
                 }
             )
         }
@@ -215,7 +237,7 @@ private fun PendingButton(
                     .clip(CircleShape)
                     .background(Color(0x11000000))
                     .clickable { onClick() }
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -256,8 +278,11 @@ private fun TimeDisplay(
 private fun TaskDisplay(
     tag: String,
     priority: Int,
+    isResting: Boolean,
+    restTimeLeft: Long,
     onDoubleClick: () -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    onRestClick: () -> Unit = {}
 ) {
     var lastClickTime by remember { mutableStateOf(0L) }
     
@@ -266,45 +291,71 @@ private fun TaskDisplay(
         contentAlignment = Alignment.TopCenter
     ) {
         if (tag.isNotEmpty() && priority >= 0) {
-            // 有任务：显示标签
-            val config = PriorityConfigs.get(priority)!!
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Top
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(config.color)
-                )
-                Spacer(Modifier.height(8.dp))
-                
-                Text(
-                    text = tag,
-                    fontSize = 16.sp,
-                    lineHeight = 20.sp,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.pointerInput(Unit) {
-                        detectTapGestures(
-                            onLongPress = { onLongPress() },
-                            onTap = {
-                                val now = System.currentTimeMillis()
-                                if (now - lastClickTime < 500) {
-                                    // 双击完成
-                                    onDoubleClick()
-                                }
-                                lastClickTime = now
-                            }
+            if (isResting) {
+                // 休息中：显示椭圆形倒计时器（可点击提前结束）
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Top
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+                            .background(Color(0xFF78909C))
+                            .clickable { onRestClick() }
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        val minutes = (restTimeLeft / 1000 / 60).toInt()
+                        val seconds = (restTimeLeft / 1000 % 60).toInt()
+                        Text(
+                            text = "Drifting %d:%02d".format(minutes, seconds),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.White
                         )
                     }
-                )
+                }
+            } else {
+                // 正常工作：显示任务标签
+                val config = PriorityConfigs.get(priority)!!
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Top
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(config.color)
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    
+                    Text(
+                        text = tag,
+                        fontSize = 16.sp,
+                        lineHeight = 20.sp,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.pointerInput(Unit) {
+                            detectTapGestures(
+                                onLongPress = { onLongPress() },
+                                onTap = {
+                                    val now = System.currentTimeMillis()
+                                    if (now - lastClickTime < 500) {
+                                        // 双击完成
+                                        onDoubleClick()
+                                    }
+                                    lastClickTime = now
+                                }
+                            )
+                        }
+                    )
+                }
             }
         } else {
             // 无任务：显示空闲图标

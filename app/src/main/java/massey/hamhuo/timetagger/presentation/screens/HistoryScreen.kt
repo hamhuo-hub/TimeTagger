@@ -70,6 +70,16 @@ fun HistoryScreen(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+                // 显示休息时间
+                if (record.restTime > 0) {
+                    val restMinutes = (record.restTime / 1000 / 60).toInt()
+                    val restSeconds = (record.restTime / 1000 % 60).toInt()
+                    Text(
+                        text = "休息 ${restMinutes}分${restSeconds}秒",
+                        fontSize = 12.sp,
+                        color = androidx.compose.ui.graphics.Color.Gray
+                    )
+                }
             }
         }
     }

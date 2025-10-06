@@ -1,6 +1,9 @@
 package massey.hamhuo.timetagger.presentation
 
 import android.content.Context
+import android.os.CountDownTimer
+import android.os.VibrationEffect
+import android.os.Vibrator
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +22,7 @@ import massey.hamhuo.timetagger.domain.TaskManager
  * 管理UI状态和业务逻辑调用
  */
 class TimeTrackerViewModel(
+    private val context: Context,
     private val repository: TimeTrackerRepository,
     private val taskManager: TaskManager,
     private val dailyResetManager: DailyResetManager
@@ -34,10 +38,25 @@ class TimeTrackerViewModel(
     private val _todayRecords = MutableStateFlow<List<TimeRecord>>(emptyList())
     val todayRecords: StateFlow<List<TimeRecord>> = _todayRecords.asStateFlow()
     
+    // 休息状态
+    private val _isResting = MutableStateFlow(false)
+    val isResting: StateFlow<Boolean> = _isResting.asStateFlow()
+    
+    private val _restTimeLeft = MutableStateFlow(0L)
+    val restTimeLeft: StateFlow<Long> = _restTimeLeft.asStateFlow()
+    
+    private var restTimer: CountDownTimer? = null
+    private val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+    
     init {
         // 初始化时检查日期
         dailyResetManager.checkAndResetDaily()
         refreshState()
+    }
+    
+    override fun onCleared() {
+        super.onCleared()
+        restTimer?.cancel()
     }
     
     /**
@@ -93,6 +112,63 @@ class TimeTrackerViewModel(
     }
     
     /**
+     * 开始任务内休息（5分钟）
+     * 任务继续进行，休息时间计入任务总时长
+     */
+    fun startTaskRest() {
+        // 只有在有任务进行时才能休息
+        if (_currentTask.value.priority < 0 || _isResting.value) return
+        
+        _isResting.value = true
+        _restTimeLeft.value = 5 * 60 * 1000L // 5分钟
+        
+        restTimer?.cancel()
+        restTimer = object : CountDownTimer(5 * 60 * 1000L, 1000L) {
+            override fun onTick(millisUntilFinished: Long) {
+                _restTimeLeft.value = millisUntilFinished
+            }
+            
+            override fun onFinish() {
+                _isResting.value = false
+                _restTimeLeft.value = 0L
+                // 记录5分钟休息时间
+                repository.addRestTimeToCurrentTask(5 * 60 * 1000L)
+                refreshState()
+                // 振动提醒继续工作
+                vibrateNotification()
+            }
+        }.start()
+    }
+    
+    /**
+     * 停止休息，继续工作
+     */
+    fun stopTaskRest() {
+        if (_isResting.value) {
+            // 计算已休息的时间
+            val restedTime = 5 * 60 * 1000L - _restTimeLeft.value
+            if (restedTime > 0) {
+                repository.addRestTimeToCurrentTask(restedTime)
+                refreshState()
+            }
+        }
+        restTimer?.cancel()
+        _isResting.value = false
+        _restTimeLeft.value = 0L
+    }
+    
+    /**
+     * 振动通知
+     */
+    private fun vibrateNotification() {
+        if (vibrator.hasVibrator()) {
+            val pattern = longArrayOf(0, 200, 100, 200, 100, 200)
+            val effect = VibrationEffect.createWaveform(pattern, -1)
+            vibrator.vibrate(effect)
+        }
+    }
+    
+    /**
      * 刷新状态
      */
     private fun refreshState() {
@@ -117,7 +193,7 @@ class TimeTrackerViewModelFactory(
             val dailyResetManager = DailyResetManager(repository, logManager)
             
             @Suppress("UNCHECKED_CAST")
-            return TimeTrackerViewModel(repository, taskManager, dailyResetManager) as T
+            return TimeTrackerViewModel(context, repository, taskManager, dailyResetManager) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
