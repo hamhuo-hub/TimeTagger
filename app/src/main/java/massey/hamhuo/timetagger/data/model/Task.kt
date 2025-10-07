@@ -25,6 +25,20 @@ data class CurrentTask(
 }
 
 /**
+ * 建议任务（完成任务后的待办建议）
+ */
+data class SuggestedTask(
+    val priority: Int,
+    val tag: String
+) {
+    fun isEmpty(): Boolean = tag.isEmpty() || priority < 0
+    
+    companion object {
+        fun empty() = SuggestedTask(-1, "")
+    }
+}
+
+/**
  * 待办任务
  */
 data class PendingTask(

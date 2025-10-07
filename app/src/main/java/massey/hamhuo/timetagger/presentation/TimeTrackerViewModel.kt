@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import massey.hamhuo.timetagger.data.model.CurrentTask
 import massey.hamhuo.timetagger.data.model.PendingTask
+import massey.hamhuo.timetagger.data.model.SuggestedTask
 import massey.hamhuo.timetagger.data.model.TimeRecord
 import massey.hamhuo.timetagger.data.repository.TimeTrackerRepository
 import massey.hamhuo.timetagger.domain.DailyResetManager
@@ -142,6 +143,37 @@ class TimeTrackerViewModel(
      */
     fun getPendingTaskCount(): Int {
         return taskManager.getPendingTaskCount()
+    }
+    
+    /**
+     * 获取建议任务（待办队列的第一个）
+     */
+    fun getSuggestedTask(): SuggestedTask {
+        val pendingTasks = repository.getPendingTasks()
+        if (pendingTasks.isNotEmpty()) {
+            val sortedTasks = pendingTasks.sortedWith(
+                compareBy({ it.priority }, { it.addTime })
+            )
+            val first = sortedTasks.first()
+            return SuggestedTask(first.priority, first.tag)
+        }
+        return SuggestedTask.empty()
+    }
+    
+    /**
+     * 接受建议的任务（开始待办队列第一个任务）
+     */
+    fun acceptSuggestedTask() {
+        taskManager.startFirstPendingTask()
+        refreshState()
+    }
+    
+    /**
+     * 从待办列表中选择并开始任务
+     */
+    fun startPendingTask(task: PendingTask) {
+        taskManager.startPendingTask(task)
+        refreshState()
     }
     
     /**

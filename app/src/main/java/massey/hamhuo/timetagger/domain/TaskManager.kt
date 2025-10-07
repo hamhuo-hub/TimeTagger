@@ -37,28 +37,48 @@ class TaskManager(private val repository: TimeTrackerRepository) {
     
     /**
      * 完成当前任务
-     * 自动从队列中取下一个任务
+     * 不自动开始下一个任务，待办队列保持不变
      */
     fun completeTask() {
         // 结束当前任务
         repository.addTaskEndEvent()
         repository.clearCurrentTask()
-        
-        // 从队列中取下一个任务
+        // 待办队列保持不变，由用户决定是否执行
+    }
+    
+    /**
+     * 开始待办队列中的第一个任务（用户确认建议后）
+     */
+    fun startFirstPendingTask() {
         val pendingTasks = repository.getPendingTasks()
         if (pendingTasks.isNotEmpty()) {
-            // 按优先级排序（P0 > P1 > P2 > P3），同优先级按时间排序
+            // 按优先级排序（P0 > P1 > P2），同优先级按时间排序
             val sortedTasks = pendingTasks.sortedWith(
                 compareBy({ it.priority }, { it.addTime })
             )
             
-            // 取出第一个任务
-            val nextTask = sortedTasks.first()
-            startTask(nextTask.priority, nextTask.tag)
+            // 取出第一个任务并开始
+            val firstTask = sortedTasks.first()
+            startTask(firstTask.priority, firstTask.tag)
             
-            // 从队列中移除
+            // 从待办队列中移除
             repository.updatePendingQueue(sortedTasks.drop(1))
         }
+    }
+    
+    /**
+     * 从待办队列中选择并开始指定的任务
+     */
+    fun startPendingTask(pendingTask: PendingTask) {
+        // 开始选中的任务
+        startTask(pendingTask.priority, pendingTask.tag)
+        
+        // 从待办队列中移除这个任务
+        val pendingTasks = repository.getPendingTasks()
+        val updatedTasks = pendingTasks.filter { 
+            !(it.priority == pendingTask.priority && it.tag == pendingTask.tag && it.addTime == pendingTask.addTime)
+        }
+        repository.updatePendingQueue(updatedTasks)
     }
     
     /**

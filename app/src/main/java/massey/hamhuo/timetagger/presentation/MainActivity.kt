@@ -63,6 +63,7 @@ class MainActivity : ComponentActivity() {
 private fun TimeTrackerApp(viewModel: TimeTrackerViewModel) {
     var showHistory by remember { mutableStateOf(false) }
     var showPending by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     
     when {
         showHistory -> {
@@ -74,7 +75,11 @@ private fun TimeTrackerApp(viewModel: TimeTrackerViewModel) {
         showPending -> {
             PendingTasksScreen(
                 tasks = viewModel.getPendingTasks(),
-                onBack = { showPending = false }
+                onBack = { showPending = false },
+                onTaskSelected = { task ->
+                    viewModel.startPendingTask(task)
+                    TileUpdateManager.requestTileUpdate(context)
+                }
             )
         }
         else -> {
@@ -110,11 +115,19 @@ private fun MainScreen(
     // 语音输入管理器
     val voiceInputManager = remember { VoiceInputManager(context) }
     
+    // 建议任务状态
+    var suggestedTag by remember { mutableStateOf("") }
+    var suggestedPriority by remember { mutableStateOf(-1) }
+    
     // 刷新当前任务状态
     LaunchedEffect(refreshTrigger) {
         val task = viewModel.getCurrentTask()
         currentTag = task.tag
         currentPriority = task.priority
+        
+        val suggested = viewModel.getSuggestedTask()
+        suggestedTag = suggested.tag
+        suggestedPriority = suggested.priority
     }
     
     // 语音输入Launcher（添加任务）
@@ -195,10 +208,12 @@ private fun MainScreen(
             
             Spacer(Modifier.height(16.dp))
             
-            // 任务标签或空闲图标
+            // 任务标签或建议任务或空闲图标
             TaskDisplay(
                 tag = currentTag,
                 priority = currentPriority,
+                suggestedTag = suggestedTag,
+                suggestedPriority = suggestedPriority,
                 isResting = isResting,
                 restTimeLeft = restTimeLeft,
                 onComplete = {
@@ -214,6 +229,11 @@ private fun MainScreen(
                 },
                 onRestClick = {
                     viewModel.stopTaskRest() // 点击倒计时器提前结束休息
+                },
+                onAcceptSuggested = {
+                    viewModel.acceptSuggestedTask()
+                    refreshTrigger++
+                    TileUpdateManager.requestTileUpdate(context)
                 }
             )
         }
@@ -279,11 +299,14 @@ private fun TimeDisplay(
 private fun TaskDisplay(
     tag: String,
     priority: Int,
+    suggestedTag: String,
+    suggestedPriority: Int,
     isResting: Boolean,
     restTimeLeft: Long,
     onComplete: () -> Unit,
     onLongPress: () -> Unit,
-    onRestClick: () -> Unit = {}
+    onRestClick: () -> Unit = {},
+    onAcceptSuggested: () -> Unit = {}
 ) {
     var offsetX by remember { mutableStateOf(0f) }
     
@@ -398,6 +421,58 @@ private fun TaskDisplay(
                                 onLongPress = { onLongPress() }
                             )
                         }
+                    )
+                }
+            }
+        } else if (suggestedTag.isNotEmpty() && suggestedPriority >= 0) {
+            // 有建议任务：显示半透明建议，支持双击确认
+            val config = PriorityConfigs.get(suggestedPriority)
+            if (config != null) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .pointerInput(suggestedTag) {
+                            detectTapGestures(
+                                onDoubleTap = {
+                                    // 双击接受建议（开始待办队列第一个任务）
+                                    onAcceptSuggested()
+                                }
+                            )
+                        },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Top
+                ) {
+                    // 提示文字
+                    Text(
+                        text = "next",
+                        fontSize = 10.sp,
+                        color = Color.Gray.copy(alpha = 0.5f),
+                        textAlign = TextAlign.Center
+                    )
+                    
+                    Spacer(Modifier.height(4.dp))
+                    
+                    // 半透明任务文字
+                    Text(
+                        text = suggestedTag,
+                        fontSize = 16.sp,
+                        lineHeight = 20.sp,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Gray.copy(alpha = 0.6f)
+                    )
+                    
+                    Spacer(Modifier.height(8.dp))
+                    
+                    // 半透明优先级圆点
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(config.color.copy(alpha = 0.4f))
                     )
                 }
             }

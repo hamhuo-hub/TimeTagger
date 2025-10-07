@@ -2,14 +2,17 @@ package massey.hamhuo.timetagger.presentation.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -24,7 +27,8 @@ import massey.hamhuo.timetagger.util.PriorityConfigs
 @Composable
 fun PendingTasksScreen(
     tasks: List<PendingTask>,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onTaskSelected: (PendingTask) -> Unit = {}
 ) {
     BackHandler { onBack() }
     
@@ -48,7 +52,16 @@ fun PendingTasksScreen(
             if (config != null) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 6.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable {
+                            // 单击选择并开始任务
+                            onTaskSelected(task)
+                            onBack()
+                        }
+                        .background(Color(0x11FFFFFF))
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
                     Box(
                         modifier = Modifier
