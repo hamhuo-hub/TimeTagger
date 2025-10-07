@@ -19,9 +19,11 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-        
-        // 只保留中文和英文
-        resourceConfigurations += listOf("zh", "en")
+    }
+    
+    // 只保留中文和英文资源
+    androidResources {
+        localeFilters += listOf("zh", "en")
     }
 
     buildTypes {
@@ -38,7 +40,7 @@ android {
     }
     
     // 优化打包配置
-    packagingOptions {
+    packaging {
         resources {
             excludes += listOf(
                 "META-INF/DEPENDENCIES",
