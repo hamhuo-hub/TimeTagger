@@ -63,7 +63,24 @@ class MainActivity : ComponentActivity() {
 private fun TimeTrackerApp(viewModel: TimeTrackerViewModel) {
     var showHistory by remember { mutableStateOf(false) }
     var showPending by remember { mutableStateOf(false) }
+    var pendingPriorityForAdd by remember { mutableStateOf(-1) }
+    var refreshTrigger by remember { mutableStateOf(0) }
     val context = LocalContext.current
+    
+    // 语音输入管理器（用于待办界面添加任务）
+    val voiceInputManager = remember { VoiceInputManager(context) }
+    
+    // 语音输入Launcher（待办界面添加任务）
+    val voiceLauncherForPending = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val spoken = voiceInputManager.extractSpokenText(result)
+        if (!spoken.isNullOrEmpty() && pendingPriorityForAdd >= 0) {
+            viewModel.addPendingTask(pendingPriorityForAdd, spoken)
+            pendingPriorityForAdd = -1
+            refreshTrigger++ // 刷新待办列表
+        }
+    }
     
     when {
         showHistory -> {
@@ -73,12 +90,20 @@ private fun TimeTrackerApp(viewModel: TimeTrackerViewModel) {
             )
         }
         showPending -> {
+            // 使用LaunchedEffect监听刷新触发器
+            LaunchedEffect(refreshTrigger) {
+                // 触发重组以获取最新的待办任务
+            }
             PendingTasksScreen(
                 tasks = viewModel.getPendingTasks(),
                 onBack = { showPending = false },
                 onTaskSelected = { task ->
                     viewModel.startPendingTask(task)
                     TileUpdateManager.requestTileUpdate(context)
+                },
+                onAddTask = { priority ->
+                    pendingPriorityForAdd = priority
+                    voiceInputManager.startVoiceInput(voiceLauncherForPending, isEdit = false)
                 }
             )
         }

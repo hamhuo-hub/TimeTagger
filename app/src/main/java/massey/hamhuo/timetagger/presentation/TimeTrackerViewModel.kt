@@ -110,6 +110,14 @@ class TimeTrackerViewModel(
     }
     
     /**
+     * 直接添加任务到待办队列
+     */
+    fun addPendingTask(priority: Int, label: String) {
+        taskManager.addPendingTask(priority, label)
+        refreshState()
+    }
+    
+    /**
      * 完成当前任务
      */
     fun completeTask() {

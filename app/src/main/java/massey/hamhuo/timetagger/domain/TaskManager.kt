@@ -94,5 +94,12 @@ class TaskManager(private val repository: TimeTrackerRepository) {
     fun getPendingTaskCount(): Int {
         return repository.getPendingTasks().size
     }
+    
+    /**
+     * 直接添加任务到待办队列（不检查优先级）
+     */
+    fun addPendingTask(priority: Int, label: String) {
+        repository.addToPendingQueue(Task(priority, label))
+    }
 }
 

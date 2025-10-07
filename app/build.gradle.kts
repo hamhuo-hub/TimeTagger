@@ -97,4 +97,5 @@ dependencies {
     implementation("androidx.wear.tiles:tiles-material:1.2.0")
     implementation("com.google.guava:guava:31.1-android")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.10.2")
 }
