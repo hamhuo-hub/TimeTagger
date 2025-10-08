@@ -1,12 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-feature android:name="android.hardware.type.watch" android:required="true" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
     <application
         android:icon="@mipmap/timetagger"
-        android:label="Time Tracker"
+        android:label="@string/app_name"
         android:allowBackup="true"
         android:supportsRtl="true">
 
@@ -41,7 +40,7 @@
         <service
             android:name=".presentation.TimeTagTileService"
             android:exported="true"
-            android:label="Time Tag"
+            android:label="@string/app_name"
             android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER"
             android:process=":tile">
             <intent-filter>

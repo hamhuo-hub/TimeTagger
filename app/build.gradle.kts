@@ -12,7 +12,7 @@ android {
         applicationId = "massey.hamhuo.timetagger"
         minSdk = 30
         targetSdk = 36
-        versionCode = 1
+        versionCode = 2
         versionName = "1.1.0"
         
         // 只保留需要的密度资源
