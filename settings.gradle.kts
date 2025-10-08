@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "timetagger"
 include(":app")
+include(":watchface")

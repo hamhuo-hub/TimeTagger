@@ -2,6 +2,7 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:icon="@mipmap/timetagger"
@@ -19,6 +20,12 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- TaskDataProvider - 为独立表盘提供当前任务数据 -->
+        <provider
+            android:name=".data.provider.TaskDataProvider"
+            android:authorities="massey.hamhuo.timetagger.provider"
+            android:exported="true" />
 
         <!-- Standalone 应用标记 -->
         <meta-data
