@@ -46,6 +46,17 @@
 
 ---
 
+## 应用截图
+
+<img src="img/img10.png" width="200" alt="截图1"/>
+<img src="img/img25.png" width="200" alt="截图2"/>
+<img src="img/img35.png" width="200" alt="截图3"/>
+<img src="img/img38.png" width="200" alt="截图4"/>
+<img src="img/img42.png" width="200" alt="截图5"/>
+<img src="img/img53.png" width="200" alt="截图6"/>
+
+---
+
 ## 后续计划
 
 时间追踪器，**基础款。**

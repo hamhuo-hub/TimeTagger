@@ -43,7 +43,18 @@ Want to export or analyze later? That’s all extendable.
 2. Open the app or tap the Tile.
 3. Speak your current activity.
 4. The system automatically records the time span and label.
-5. Tap the clock to view today’s activity log.
+5. Tap the clock to view today's activity log.
+
+---
+
+## Screenshots
+
+<img src="img/img10.png" width="200" alt="Screenshot 1"/>
+<img src="img/img25.png" width="200" alt="Screenshot 2"/>
+<img src="img/img35.png" width="200" alt="Screenshot 3"/>
+<img src="img/img38.png" width="200" alt="Screenshot 4"/>
+<img src="img/img42.png" width="200" alt="Screenshot 5"/>
+<img src="img/img53.png" width="200" alt="Screenshot 6"/>
 
 ---
 
