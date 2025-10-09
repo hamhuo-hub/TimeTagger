@@ -94,6 +94,13 @@ class TimeTagWatchFaceRenderer(
         isAntiAlias = true
         style = Paint.Style.FILL
     }
+    
+    private val mottoPaint = Paint().apply {
+        color = Color.parseColor("#AAAAAA")
+        textSize = 10f * 2           // 较小的字体
+        textAlign = Paint.Align.CENTER
+        isAntiAlias = true
+    }
 
     override fun render(
         canvas: Canvas,
@@ -132,6 +139,11 @@ class TimeTagWatchFaceRenderer(
             tagPaint.color = Color.parseColor("#888888")
             canvas.drawText("Tap to start", centerX, centerY + 10f, tagPaint)
         }
+        
+        // 绘制底部格言（分两行显示）
+        val mottoY = bounds.bottom - 60f
+        canvas.drawText("不要好高骛远，把力所能及的事做好", centerX, mottoY, mottoPaint)
+        canvas.drawText("多做有意义的事", centerX, mottoY + 24f, mottoPaint)
     }
     
     /**
