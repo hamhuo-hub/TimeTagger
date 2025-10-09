@@ -262,6 +262,15 @@ private fun MainScreen(
                 }
             )
         }
+        
+        // 顶部隐藏的点击区域，始终可以点击进入待办界面
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(40.dp)
+                .align(Alignment.TopCenter)
+                .clickable { onClickPending() }
+        )
     }
 }
 
