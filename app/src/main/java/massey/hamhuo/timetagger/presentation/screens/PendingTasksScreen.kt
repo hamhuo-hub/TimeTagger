@@ -87,6 +87,17 @@ fun PendingTasksScreen(
                     }
                 }
             }
+            
+            // 底部格言
+            item {
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = "会选择才会有时间",
+                    fontSize = 12.sp,
+                    color = Color(0xFF888888),
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
         }
         
         // 顶部圆弧按钮（只绘制，不处理触摸）- 使用与主界面相同的样式
