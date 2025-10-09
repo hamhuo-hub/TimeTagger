@@ -1,12 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-feature android:name="android.hardware.type.watch" android:required="true" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:icon="@mipmap/timetagger"
-        android:label="Time Tracker"
+        android:label="@string/app_name"
         android:allowBackup="true"
         android:supportsRtl="true">
 
@@ -20,6 +20,12 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- TaskDataProvider - 为独立表盘提供当前任务数据 -->
+        <provider
+            android:name=".data.provider.TaskDataProvider"
+            android:authorities="massey.hamhuo.timetagger.provider"
+            android:exported="true" />
 
         <!-- Standalone 应用标记 -->
         <meta-data
@@ -41,7 +47,7 @@
         <service
             android:name=".presentation.TimeTagTileService"
             android:exported="true"
-            android:label="Time Tag"
+            android:label="@string/app_name"
             android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER"
             android:process=":tile">
             <intent-filter>

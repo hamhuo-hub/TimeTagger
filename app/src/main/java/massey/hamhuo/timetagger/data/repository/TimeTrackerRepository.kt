@@ -14,8 +14,10 @@ import java.util.*
 
 /**
  * 时间追踪数据仓库
- * 负责所有数据的持久化操作
- * 主应用进程使用，同时通过CrossProcessDataReader同步数据给表盘和Tile进程
+ * 
+ * 存储架构：
+ * 1. 主存储：SharedPreferences + JSON（轻量、快速）
+ * 2. 跨进程：文件共享（Tile）+ ContentProvider（独立表盘）
  */
 class TimeTrackerRepository(context: Context) {
     
@@ -127,8 +129,9 @@ class TimeTrackerRepository(context: Context) {
             .putString("last_tag", task.tag)
             .putInt("last_priority", task.priority)
             .putString("last_date", day)
-            .putLong("current_rest_time", 0)  // 新任务开始，重置休息时间
+            .putLong("current_rest_time", 0)
             .apply()
+        
         syncCurrentTaskToFile()
     }
     
@@ -160,6 +163,7 @@ class TimeTrackerRepository(context: Context) {
             .putString(key, arr.toString())
             .putLong("current_rest_time", 0)
             .apply()
+        
         syncCurrentTaskToFile()
     }
     

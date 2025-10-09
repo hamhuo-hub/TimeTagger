@@ -11,6 +11,8 @@ coreSplashscreen = "1.0.1"
 firebaseCrashlyticsBuildtools = "3.0.6"
 wearRemoteInteractions = "1.1.0"
 firebasePerfKtx = "22.0.2"
+wearComplicationsDataSourceKtx = "1.0.0-alpha22"
+wearComplicationsProvider = "1.0.0-alpha17"
 
 [libraries]
 play-services-wearable = { group = "com.google.android.gms", name = "play-services-wearable", version.ref = "playServicesWearable" }
@@ -27,6 +29,8 @@ wear-tooling-preview = { group = "androidx.wear", name = "wear-tooling-preview",
 activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
 wear-remote-interactions = { group = "androidx.wear", name = "wear-remote-interactions", version.ref = "wearRemoteInteractions" }
+wear-complications-data-source-ktx = { group = "androidx.wear", name = "wear-complications-data-source-ktx", version.ref = "wearComplicationsDataSourceKtx" }
+wear-complications-provider = { group = "androidx.wear", name = "wear-complications-provider", version.ref = "wearComplicationsProvider" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
