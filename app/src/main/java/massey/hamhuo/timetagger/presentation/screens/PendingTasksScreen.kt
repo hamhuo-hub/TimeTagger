@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,9 +35,15 @@ fun PendingTasksScreen(
     tasks: List<PendingTask>,
     onBack: () -> Unit,
     onTaskSelected: (PendingTask) -> Unit = {},
-    onAddTask: (Int) -> Unit = {}
+    onAddTask: (Int) -> Unit = {},
+    refreshKey: Int = 0
 ) {
     BackHandler { onBack() }
+    
+    // 使用refreshKey触发重组，获取最新任务列表
+    LaunchedEffect(refreshKey) {
+        // 刷新时无需额外操作，重组会获取最新数据
+    }
     
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(

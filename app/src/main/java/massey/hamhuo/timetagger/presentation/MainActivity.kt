@@ -78,40 +78,53 @@ private fun TimeTrackerApp(viewModel: TimeTrackerViewModel) {
         if (!spoken.isNullOrEmpty() && pendingPriorityForAdd >= 0) {
             viewModel.addPendingTask(pendingPriorityForAdd, spoken)
             pendingPriorityForAdd = -1
-            refreshTrigger++ // 刷新待办列表
+            refreshTrigger++
         }
+    }
+    
+    // 返回处理器：确保只关闭当前屏幕
+    val onBackToMain = {
+        showHistory = false
+        showPending = false
+        pendingPriorityForAdd = -1
     }
     
     when {
         showHistory -> {
             HistoryScreen(
                 records = viewModel.getTodayRecords(),
-                onBack = { showHistory = false }
+                onBack = onBackToMain
             )
         }
         showPending -> {
-            // 使用LaunchedEffect监听刷新触发器
-            LaunchedEffect(refreshTrigger) {
-                // 触发重组以获取最新的待办任务
-            }
             PendingTasksScreen(
                 tasks = viewModel.getPendingTasks(),
-                onBack = { showPending = false },
+                onBack = onBackToMain,
                 onTaskSelected = { task ->
                     viewModel.startPendingTask(task)
+                    showPending = false
                     TileUpdateManager.requestTileUpdate(context)
                 },
                 onAddTask = { priority ->
                     pendingPriorityForAdd = priority
                     voiceInputManager.startVoiceInput(voiceLauncherForPending, isEdit = false)
-                }
+                },
+                refreshKey = refreshTrigger
             )
         }
         else -> {
             MainScreen(
                 viewModel = viewModel,
-                onClickTime = { showHistory = true },
-                onClickPending = { showPending = true }
+                onClickTime = { 
+                    if (!showHistory && !showPending) {
+                        showHistory = true
+                    }
+                },
+                onClickPending = { 
+                    if (!showHistory && !showPending) {
+                        showPending = true
+                    }
+                }
             )
         }
     }
@@ -155,6 +168,11 @@ private fun MainScreen(
         suggestedPriority = suggested.priority
     }
     
+    // 待办任务数量（独立状态，避免频繁调用viewModel）
+    val pendingCount = remember(refreshTrigger) { 
+        viewModel.getPendingTaskCount() 
+    }
+    
     // 语音输入Launcher（添加任务）
     val voiceLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -184,10 +202,32 @@ private fun MainScreen(
     }
     
     // 启动语音输入
-    fun startVoiceInput(priority: Int, isEdit: Boolean = false) {
+    val startVoiceInput: (Int, Boolean) -> Unit = { priority, isEdit ->
         pendingPriority = priority
         val launcher = if (isEdit) editLauncher else voiceLauncher
         voiceInputManager.startVoiceInput(launcher, isEdit)
+    }
+    
+    // 完成任务回调
+    val onCompleteTask: () -> Unit = {
+        viewModel.completeTask()
+        viewModel.stopTaskRest()
+        currentTag = ""
+        currentPriority = -1
+        refreshTrigger++
+        TileUpdateManager.requestTileUpdate(context)
+    }
+    
+    // 停止休息回调
+    val onStopRest: () -> Unit = {
+        viewModel.stopTaskRest()
+    }
+    
+    // 接受建议任务回调
+    val onAcceptSuggested: () -> Unit = {
+        viewModel.acceptSuggestedTask()
+        refreshTrigger++
+        TileUpdateManager.requestTileUpdate(context)
     }
     
     Box(
@@ -196,9 +236,8 @@ private fun MainScreen(
     ) {
         // 优先级圆环（P3改为休息按钮）
         PriorityArcRing(
-            onPriorityClick = { priority -> startVoiceInput(priority) },
+            onPriorityClick = { priority -> startVoiceInput(priority, false) },
             onRestClick = {
-                // 只有在有任务时才能休息
                 if (currentTag.isNotEmpty() && currentPriority >= 0) {
                     if (isResting) {
                         viewModel.stopTaskRest()
@@ -219,7 +258,7 @@ private fun MainScreen(
         ) {
             // 待办按钮
             PendingButton(
-                count = viewModel.getPendingTaskCount(),
+                count = pendingCount,
                 onClick = onClickPending
             )
             
@@ -241,25 +280,10 @@ private fun MainScreen(
                 suggestedPriority = suggestedPriority,
                 isResting = isResting,
                 restTimeLeft = restTimeLeft,
-                onComplete = {
-                    viewModel.completeTask()
-                    viewModel.stopTaskRest() // 完成任务时停止休息
-                    currentTag = ""
-                    currentPriority = -1
-                    refreshTrigger++
-                    TileUpdateManager.requestTileUpdate(context)
-                },
-                onLongPress = {
-                    startVoiceInput(currentPriority, isEdit = true)
-                },
-                onRestClick = {
-                    viewModel.stopTaskRest() // 点击倒计时器提前结束休息
-                },
-                onAcceptSuggested = {
-                    viewModel.acceptSuggestedTask()
-                    refreshTrigger++
-                    TileUpdateManager.requestTileUpdate(context)
-                }
+                onComplete = onCompleteTask,
+                onLongPress = { startVoiceInput(currentPriority, true) },
+                onRestClick = onStopRest,
+                onAcceptSuggested = onAcceptSuggested
             )
         }
         
@@ -348,10 +372,13 @@ private fun TaskDisplay(
         modifier = Modifier
             .height(70.dp)
             .offset { androidx.compose.ui.unit.IntOffset(offsetX.toInt(), 0) }
-            .pointerInput(tag, priority) {
+            .pointerInput(tag, priority, isResting) {
                 detectDragGestures(
                     onDrag = { change, dragAmount ->
                         change.consume()
+                        // 休息时不允许左滑
+                        if (isResting) return@detectDragGestures
+                        
                         // 只允许左滑
                         if (dragAmount.x < 0) {
                             offsetX = (offsetX + dragAmount.x).coerceAtLeast(-200f)
@@ -361,6 +388,12 @@ private fun TaskDisplay(
                         }
                     },
                     onDragEnd = {
+                        // 休息时不允许完成任务
+                        if (isResting) {
+                            offsetX = 0f
+                            return@detectDragGestures
+                        }
+                        
                         // 如果左滑超过80像素，完成任务
                         if (offsetX < -80f && tag.isNotEmpty() && priority >= 0) {
                             onComplete()

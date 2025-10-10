@@ -8,13 +8,14 @@ import androidx.wear.watchface.Renderer
 import androidx.wear.watchface.WatchState
 import androidx.wear.watchface.style.CurrentUserStyleRepository
 import java.time.ZonedDateTime
+import androidx.core.graphics.toColorInt
 
 /**
  * 表盘渲染器
  * 使用与 Tile 相同的设计语言
  */
 class TimeTagWatchFaceRenderer(
-    private val context: Context,
+    context: Context,
     surfaceHolder: SurfaceHolder,
     watchState: WatchState,
     currentUserStyleRepository: CurrentUserStyleRepository
@@ -84,7 +85,7 @@ class TimeTagWatchFaceRenderer(
     }
 
     private val enLabelPaint = Paint().apply {
-        color = Color.parseColor("#EEEEEE")
+        color = "#EEEEEE".toColorInt()
         textSize = 6f * 2           // Tile: 9sp
         textAlign = Paint.Align.LEFT
         isAntiAlias = true
@@ -96,11 +97,18 @@ class TimeTagWatchFaceRenderer(
     }
     
     private val mottoPaint = Paint().apply {
-        color = Color.parseColor("#AAAAAA")
+        color = "#AAAAAA".toColorInt()
         textSize = 10f * 2           // 较小的字体
         textAlign = Paint.Align.CENTER
         isAntiAlias = true
     }
+    
+    // 格言列表（随机显示）
+    private val mottos = listOf(
+        listOf("不要好高骛远","把力所能及的事做好"),
+        listOf("很多事不是因为有意义才去做", "而是做了才有意义"),
+        listOf("正在做的每一件事都有意义")
+    )
 
     override fun render(
         canvas: Canvas,
@@ -136,14 +144,26 @@ class TimeTagWatchFaceRenderer(
             }
         } else {
             // 无任务提示
-            tagPaint.color = Color.parseColor("#888888")
+            tagPaint.color = "#888888".toColorInt()
             canvas.drawText("Tap to start", centerX, centerY + 10f, tagPaint)
         }
         
-        // 绘制底部格言（分两行显示）
-        val mottoY = bounds.bottom - 60f
-        canvas.drawText("不要好高骛远，把力所能及的事做好", centerX, mottoY, mottoPaint)
-        canvas.drawText("多做有意义的事", centerX, mottoY + 24f, mottoPaint)
+        // 绘制底部格言（随机切换，每分钟更新）
+        // 使用当前小时+分钟作为随机种子，保证同一分钟内显示相同格言
+        val seed = zonedDateTime.hour * 60 + zonedDateTime.minute
+        val mottoIndex = seed % mottos.size
+        val currentMotto = mottos[mottoIndex]
+        
+        // 动态计算格言起始位置（支持1-2行）
+        val lineCount = currentMotto.size
+        val lineHeight = 24f
+        var mottoY = bounds.bottom - 60f + (2 - lineCount) * lineHeight / 2
+        
+        // 绘制所有行
+        currentMotto.forEach { line ->
+            canvas.drawText(line, centerX, mottoY, mottoPaint)
+            mottoY += lineHeight
+        }
     }
     
     /**
