@@ -18,6 +18,7 @@ import java.util.*
  * 存储架构：
  * 1. 主存储：SharedPreferences + JSON（轻量、快速）
  * 2. 跨进程：文件共享（Tile）+ ContentProvider（独立表盘）
+ * 3. 内存缓存：减少 JSON 解析，降低 GC 压力
  */
 class TimeTrackerRepository(context: Context) {
     
@@ -26,6 +27,14 @@ class TimeTrackerRepository(context: Context) {
         appContext.getSharedPreferences("time_tracker", Context.MODE_PRIVATE)
     
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    
+    // 缓存：减少 JSON 解析和对象创建
+    private var cachedPendingTasks: List<PendingTask>? = null
+    private var cachedPendingTasksKey: String? = null
+    
+    private var cachedTodayRecords: List<TimeRecord>? = null
+    private var cachedTodayRecordsKey: String? = null
+    private var cachedTodayRecordsTime: Long = 0
     
     // ==================== 当前任务 ====================
     
@@ -133,6 +142,7 @@ class TimeTrackerRepository(context: Context) {
             .apply()
         
         syncCurrentTaskToFile()
+        invalidateTodayRecordsCache()  // 清除缓存
     }
     
     /**
@@ -165,20 +175,37 @@ class TimeTrackerRepository(context: Context) {
             .apply()
         
         syncCurrentTaskToFile()
+        invalidateTodayRecordsCache()  // 清除缓存
     }
     
     /**
      * 获取今天的时间记录
+     * 优化：使用缓存，5秒内的重复请求返回缓存数据
      */
     fun getTodayRecords(): List<TimeRecord> {
         val key = "events_${dateFormat.format(Date())}"
+        val now = System.currentTimeMillis()
+        
+        // 检查缓存（5秒内有效）
+        if (cachedTodayRecords != null && 
+            cachedTodayRecordsKey == key && 
+            now - cachedTodayRecordsTime < 5000) {
+            return cachedTodayRecords!!
+        }
+        
         val arr = try { 
             JSONArray(prefs.getString(key, "[]")) 
         } catch (_: Exception) { 
             JSONArray() 
         }
         
-        if (arr.length() == 0) return emptyList()
+        if (arr.length() == 0) {
+            val emptyList = emptyList<TimeRecord>()
+            cachedTodayRecords = emptyList
+            cachedTodayRecordsKey = key
+            cachedTodayRecordsTime = now
+            return emptyList
+        }
         
         val records = mutableListOf<TimeRecord>()
         val currentTask = getCurrentTask()
@@ -208,7 +235,22 @@ class TimeTrackerRepository(context: Context) {
             
             records += TimeRecord(start, end, tag, priority, finalRestTime)
         }
+        
+        // 缓存结果
+        cachedTodayRecords = records
+        cachedTodayRecordsKey = key
+        cachedTodayRecordsTime = now
+        
         return records
+    }
+    
+    /**
+     * 清除今日记录缓存（添加/修改任务时调用）
+     */
+    private fun invalidateTodayRecordsCache() {
+        cachedTodayRecords = null
+        cachedTodayRecordsKey = null
+        cachedTodayRecordsTime = 0
     }
     
     /**
@@ -237,13 +279,22 @@ class TimeTrackerRepository(context: Context) {
             .put("tag", task.tag)
             .put("addTime", task.timestamp))
         prefs.edit().putString("pending_queue", queue.toString()).apply()
+        invalidatePendingTasksCache()  // 清除缓存
     }
     
     /**
      * 获取待办任务列表
+     * 优化：使用缓存，避免频繁 JSON 解析
      */
     fun getPendingTasks(): List<PendingTask> {
-        val queue = JSONArray(prefs.getString("pending_queue", "[]"))
+        val key = prefs.getString("pending_queue", "[]") ?: "[]"
+        
+        // 检查缓存
+        if (cachedPendingTasks != null && cachedPendingTasksKey == key) {
+            return cachedPendingTasks!!
+        }
+        
+        val queue = JSONArray(key)
         val tasks = mutableListOf<PendingTask>()
         for (i in 0 until queue.length()) {
             val obj = queue.getJSONObject(i)
@@ -253,7 +304,20 @@ class TimeTrackerRepository(context: Context) {
                 addTime = obj.getLong("addTime")
             ))
         }
+        
+        // 缓存结果
+        cachedPendingTasks = tasks
+        cachedPendingTasksKey = key
+        
         return tasks
+    }
+    
+    /**
+     * 清除待办任务缓存（修改队列时调用）
+     */
+    private fun invalidatePendingTasksCache() {
+        cachedPendingTasks = null
+        cachedPendingTasksKey = null
     }
     
     /**
@@ -268,6 +332,7 @@ class TimeTrackerRepository(context: Context) {
                 .put("addTime", it.addTime))
         }
         prefs.edit().putString("pending_queue", queue.toString()).apply()
+        invalidatePendingTasksCache()  // 清除缓存
     }
     
     /**
@@ -275,6 +340,7 @@ class TimeTrackerRepository(context: Context) {
      */
     fun clearPendingQueue() {
         prefs.edit().putString("pending_queue", "[]").apply()
+        invalidatePendingTasksCache()  // 清除缓存
     }
     
     // ==================== 日期管理 ====================

@@ -1,6 +1,11 @@
 package massey.hamhuo.timetagger.presentation
 
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Bundle
+import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -11,8 +16,6 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,33 +29,112 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import massey.hamhuo.timetagger.presentation.components.PriorityArcRing
 import massey.hamhuo.timetagger.presentation.components.rememberTimeMinuteTicker
 import massey.hamhuo.timetagger.presentation.screens.HistoryScreen
 import massey.hamhuo.timetagger.presentation.screens.PendingTasksScreen
+import massey.hamhuo.timetagger.service.TimeTrackerService
 import massey.hamhuo.timetagger.util.PriorityConfigs
 
 /**
  * 重构后的MainActivity
  * 职责：Activity生命周期管理和UI组合
+ * 使用后台服务管理时间追踪逻辑
  */
 class MainActivity : ComponentActivity() {
+    
+    private val _serviceState = MutableStateFlow<TimeTrackerService?>(null)
+    private val serviceState: StateFlow<TimeTrackerService?> = _serviceState
+    private var isBound = false
+    
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+            val serviceBinder = binder as TimeTrackerService.ServiceBinder
+            _serviceState.value = serviceBinder.getService()
+            isBound = true
+        }
+        
+        override fun onServiceDisconnected(name: ComponentName?) {
+            _serviceState.value = null
+            isBound = false
+        }
+    }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // 启动服务
+        TimeTrackerService.startService(this)
+        
+        // 绑定服务
+        val intent = Intent(this, TimeTrackerService::class.java)
+        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        
         setContent {
             MaterialTheme {
-                val viewModel: TimeTrackerViewModel = viewModel(
-                    factory = TimeTrackerViewModelFactory(applicationContext)
-                )
+                // 使用 StateFlow.collectAsState 监听服务状态
+                val trackerService by serviceState.collectAsState()
                 
-                TimeTrackerApp(viewModel)
+                if (trackerService != null) {
+                    val viewModel: TimeTrackerViewModel = viewModel(
+                        factory = TimeTrackerViewModelFactory(trackerService!!)
+                    )
+                    TimeTrackerApp(viewModel)
+                } else {
+                    // 显示加载状态
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("初始化中...")
+                    }
+                }
             }
         }
+    }
+    
+    override fun onStop() {
+        super.onStop()
+        // Activity 进入后台时解绑服务，避免内存泄漏
+        if (isBound) {
+            try {
+                unbindService(serviceConnection)
+            } catch (e: Exception) {
+                // 忽略解绑异常
+            }
+            isBound = false
+        }
+    }
+    
+    override fun onStart() {
+        super.onStart()
+        // Activity 回到前台时重新绑定服务
+        if (!isBound) {
+            val intent = Intent(this, TimeTrackerService::class.java)
+            try {
+                bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+            } catch (e: Exception) {
+                // 忽略绑定异常
+            }
+        }
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        // 确保资源释放
+        if (isBound) {
+            try {
+                unbindService(serviceConnection)
+            } catch (e: Exception) {
+                // 忽略解绑异常
+            }
+            isBound = false
+        }
+        _serviceState.value = null
     }
 }
 
@@ -544,13 +626,32 @@ private fun TaskDisplay(
                 }
             }
         } else {
-            // 无任务：显示空闲图标
-            Icon(
-                imageVector = Icons.Filled.CheckCircle,
-                contentDescription = "空闲",
+            // 无任务：显示空闲图标（自绘制圆形对勾）
+            Box(
                 modifier = Modifier.size(32.dp),
-                tint = Color(0xFF666666)
-            )
+                contentAlignment = Alignment.Center
+            ) {
+                // 外圆
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF666666))
+                )
+                // 对勾（使用白色圆形简化）
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF000000))
+                )
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF666666))
+                )
+            }
         }
     }
 }

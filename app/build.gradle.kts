@@ -77,11 +77,9 @@ dependencies {
 
     implementation(platform(libs.compose.bom))
     implementation(libs.ui)
-    implementation(libs.ui.graphics)
     implementation(libs.ui.tooling.preview)
     implementation(libs.compose.material)
     implementation(libs.compose.foundation)
-    implementation(libs.wear.tooling.preview)
     implementation(libs.activity.compose)
     implementation(libs.core.splashscreen)
     androidTestImplementation(platform(libs.compose.bom))
@@ -89,10 +87,16 @@ dependencies {
     debugImplementation(libs.ui.tooling)
     debugImplementation(libs.ui.test.manifest)
     
-    // 只导入需要的图标，不使用 extended
-    implementation("androidx.compose.material:material-icons-core")
+    // Tiles（表盘磁贴）
     implementation("androidx.wear.tiles:tiles:1.2.0")
     implementation("androidx.wear.tiles:tiles-material:1.2.0")
+    
+    // Guava（Tiles 需要）
     implementation("com.google.guava:guava:31.1-android")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose")
+    
+    // ViewModel
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    
+    // Kotlin 协程（Flow 支持）
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 }
