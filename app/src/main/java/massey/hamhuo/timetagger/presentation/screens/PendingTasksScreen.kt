@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,14 +69,17 @@ fun PendingTasksScreen(
                 if (config != null) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable {
-                                // 单击选择并开始任务
-                                onTaskSelected(task)
-                                onBack()
-                            }
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) {
+                            // 单击选择并开始任务
+                            onTaskSelected(task)
+                            onBack()
+                        }
                             .background(Color(0x11FFFFFF))
                             .padding(horizontal = 12.dp, vertical = 8.dp)
                     ) {
@@ -152,7 +157,10 @@ fun PendingTasksScreen(
                 modifier = Modifier
                     .weight(0.2f)
                     .fillMaxHeight()
-                    .clickable { onAddTask(2) }
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) { onAddTask(2) }
             )
             
             // 右上 P1 蓝色圆弧点击区域
@@ -160,7 +168,10 @@ fun PendingTasksScreen(
                 modifier = Modifier
                     .weight(0.2f)
                     .fillMaxHeight()
-                    .clickable { onAddTask(1) }
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) { onAddTask(1) }
             )
         }
     }

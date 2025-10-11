@@ -20,11 +20,7 @@ android {
             useSupportLibrary = true
         }
     }
-    
-    // 只保留中文和英文资源
-    androidResources {
-        localeFilters += listOf("zh", "en")
-    }
+
 
     buildTypes {
         release {
@@ -88,15 +84,15 @@ dependencies {
     debugImplementation(libs.ui.test.manifest)
     
     // Tiles（表盘磁贴）
-    implementation("androidx.wear.tiles:tiles:1.2.0")
-    implementation("androidx.wear.tiles:tiles-material:1.2.0")
+    implementation(libs.tiles)
+    implementation(libs.tiles.material)
     
     // Guava（Tiles 需要）
-    implementation("com.google.guava:guava:31.1-android")
+    implementation(libs.guava)
     
     // ViewModel
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
+    implementation(libs.lifecycle.viewmodel.compose)
     
     // Kotlin 协程（Flow 支持）
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation(libs.kotlinx.coroutines.android)
 }

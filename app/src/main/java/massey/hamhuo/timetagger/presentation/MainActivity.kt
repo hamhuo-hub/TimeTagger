@@ -14,6 +14,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.*
@@ -375,7 +376,10 @@ private fun MainScreen(
                 .fillMaxWidth()
                 .height(40.dp)
                 .align(Alignment.TopCenter)
-                .clickable { onClickPending() }
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { onClickPending() }
         )
     }
 }
@@ -397,7 +401,10 @@ private fun PendingButton(
                 modifier = Modifier
                     .clip(CircleShape)
                     .background(Color(0x11000000))
-                    .clickable { onClick() }
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) { onClick() }
                     .padding(horizontal = 12.dp, vertical = 4.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -500,7 +507,10 @@ private fun TaskDisplay(
                         modifier = Modifier
                             .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
                             .background(Color(0xFF4CAF50))
-                            .clickable { onRestClick() }
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() }
+                            ) { onRestClick() }
                             .padding(horizontal = 16.dp, vertical = 6.dp),
                         contentAlignment = Alignment.Center
                     ) {
