@@ -27,18 +27,18 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- TaskDataProvider - 为独立表盘提供当前任务数据 -->
+
         <provider
             android:name=".data.provider.TaskDataProvider"
             android:authorities="massey.hamhuo.timetagger.provider"
             android:exported="true" />
 
-        <!-- Standalone 应用标记 -->
+
         <meta-data
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
 
-        <!-- 主 Activity -->
+
         <activity
             android:name=".presentation.MainActivity"
             android:exported="true"
@@ -49,7 +49,7 @@
             </intent-filter>
         </activity>
 
-        <!-- Tile Service - 独立进程运行 -->
+
         <service
             android:name=".presentation.TimeTagTileService"
             android:exported="true"
@@ -64,7 +64,7 @@
                 android:resource="@drawable/tile_preview" />
         </service>
 
-        <!-- Rest Alarm Receiver -->
+
         <receiver
             android:name=".presentation.RestAlarmReceiver"
             android:exported="false">
@@ -73,7 +73,7 @@
             </intent-filter>
         </receiver>
 
-        <!-- Time Tracker Service - 前台服务 -->
+
         <service
             android:name=".service.TimeTrackerService"
             android:enabled="true"

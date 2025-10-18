@@ -11,8 +11,7 @@ import java.time.ZonedDateTime
 import androidx.core.graphics.toColorInt
 
 /**
- * 表盘渲染器
- * 使用与 Tile 相同的设计语言
+ * Watch Face Renderer
  */
 class TimeTagWatchFaceRenderer(
     context: Context,
@@ -28,7 +27,7 @@ class TimeTagWatchFaceRenderer(
     clearWithBackgroundTintBeforeRenderingHighlightLayer = false
 ) {
 
-    // 共享资源
+    // Shared assets
     class TimeTagSharedAssets : SharedAssets {
         override fun onDestroy() {}
     }
@@ -37,10 +36,10 @@ class TimeTagWatchFaceRenderer(
         return TimeTagSharedAssets()
     }
 
-    // 数据读取器
+    // Task reader
     private val taskReader = CurrentTaskReader(context)
     
-    // 优先级配置（与 Tile 一致）
+    // Priority config
     private data class PriorityConfig(
         val color: Int,
         val labelCn: String,
@@ -48,12 +47,11 @@ class TimeTagWatchFaceRenderer(
     )
     
     private val priorityConfigs = mapOf(
-        0 to PriorityConfig(0xFFEF5350.toInt(), "突发", "Important & Urgent"),
         1 to PriorityConfig(0xFF42A5F5.toInt(), "核心", "Core"),
         2 to PriorityConfig(0xFFFFCA28.toInt(), "短期", "Urgent")
     )
 
-    // 画笔（与 Tile 尺寸一致，表盘放大2倍）
+    // Paint
     private val timePaint = Paint().apply {
         color = Color.WHITE
         textSize = 36f * 2          // Tile: 36sp
@@ -98,16 +96,16 @@ class TimeTagWatchFaceRenderer(
     
     private val mottoPaint = Paint().apply {
         color = "#AAAAAA".toColorInt()
-        textSize = 10f * 2           // 较小的字体
+        textSize = 10f * 2
         textAlign = Paint.Align.CENTER
         isAntiAlias = true
     }
     
-    // 格言列表（随机显示）
+    // Motto list (random display)
     private val mottos = listOf(
-        listOf("不要好高骛远","把力所能及的事做好"),
-        listOf("很多事不是因为有意义才去做", "而是做了才有意义"),
-        listOf("正在做的每一件事都有意义")
+        listOf("Start where you are", "Do what you can"),
+        listOf("Action creates meaning", "Not the other way around"),
+        listOf("Every moment matters")
     )
 
     override fun render(
@@ -116,13 +114,13 @@ class TimeTagWatchFaceRenderer(
         zonedDateTime: ZonedDateTime,
         sharedAssets: TimeTagSharedAssets
     ) {
-        // 背景
+        // Background
         canvas.drawColor(Color.BLACK)
 
         val centerX = bounds.exactCenterX()
         val centerY = bounds.exactCenterY()
 
-        // 绘制时间（与 Tile 一致）
+        // Draw time
         val timeText = String.format(
             "%02d:%02d",
             zonedDateTime.hour,
@@ -130,45 +128,42 @@ class TimeTagWatchFaceRenderer(
         )
         canvas.drawText(timeText, centerX, centerY - 60f, timePaint)
 
-        // 读取当前任务
+        // Read current task
         val currentTask = taskReader.getCurrentTask()
 
         if (currentTask.tag.isNotEmpty() && currentTask.priority >= 0) {
             val config = priorityConfigs[currentTask.priority]
             if (config != null) {
-                // 绘制优先级标签（带圆角背景，与 Tile 一致）
+                // Draw priority label
                 drawPriorityLabel(canvas, centerX, centerY + 10f, currentTask.priority, config)
                 
-                // 绘制任务名称
+                // Draw task name
                 canvas.drawText(currentTask.tag, centerX, centerY + 75f, tagPaint)
             }
         } else {
-            // 无任务提示
+            // No task hint
             tagPaint.color = "#888888".toColorInt()
             canvas.drawText("Tap to start", centerX, centerY + 10f, tagPaint)
         }
         
-        // 绘制底部格言（随机切换，每分钟更新）
-        // 使用当前小时+分钟作为随机种子，保证同一分钟内显示相同格言
+        // Draw motto
         val seed = zonedDateTime.hour * 60 + zonedDateTime.minute
         val mottoIndex = seed % mottos.size
         val currentMotto = mottos[mottoIndex]
         
-        // 动态计算格言起始位置（支持1-2行）
+        // Calculate position
         val lineCount = currentMotto.size
         val lineHeight = 24f
         var mottoY = bounds.bottom - 60f + (2 - lineCount) * lineHeight / 2
         
-        // 绘制所有行
+        // Draw lines
         currentMotto.forEach { line ->
             canvas.drawText(line, centerX, mottoY, mottoPaint)
             mottoY += lineHeight
         }
     }
     
-    /**
-     * 绘制优先级标签（模仿 Tile 的圆角背景设计）
-     */
+    // Draw priority label
     private fun drawPriorityLabel(
         canvas: Canvas,
         centerX: Float,
@@ -176,15 +171,15 @@ class TimeTagWatchFaceRenderer(
         priority: Int,
         config: PriorityConfig
     ) {
-        // 计算标签尺寸
+        // Calculate size
         val pText = "P$priority"
         val pWidth = pLabelPaint.measureText(pText)
         val cnWidth = cnLabelPaint.measureText(config.labelCn)
         val enWidth = enLabelPaint.measureText(config.labelEn)
         val labelWidth = pWidth + 12f + maxOf(cnWidth, enWidth)
-        val labelHeight = 56f  // 高度
+        val labelHeight = 56f
         
-        // 圆角矩形背景
+        // Background
         val rect = RectF(
             centerX - labelWidth / 2 - 16f,
             centerY - labelHeight / 2,
@@ -195,11 +190,11 @@ class TimeTagWatchFaceRenderer(
         backgroundPaint.color = config.color
         canvas.drawRoundRect(rect, 24f, 24f, backgroundPaint)
         
-        // P 标签
+        // P label
         val textX = centerX - labelWidth / 2 + 8f
         canvas.drawText(pText, textX, centerY + 8f, pLabelPaint)
         
-        // 中文和英文标签（垂直排列）
+        // CN and EN labels
         val descX = textX + pWidth + 12f
         canvas.drawText(config.labelCn, descX, centerY - 2f, cnLabelPaint)
         canvas.drawText(config.labelEn, descX, centerY + 14f, enLabelPaint)
@@ -211,7 +206,7 @@ class TimeTagWatchFaceRenderer(
         zonedDateTime: ZonedDateTime,
         sharedAssets: TimeTagSharedAssets
     ) {
-        // 高亮层（可选）
+        // Highlight layer
     }
 }
 
