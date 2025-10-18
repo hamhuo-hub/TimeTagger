@@ -3,7 +3,7 @@ package massey.hamhuo.timetagger.util
 import androidx.compose.ui.graphics.Color
 
 /**
- * 优先级配置
+ * Priority Config
  */
 data class PriorityConfig(
     val label: String,
@@ -12,28 +12,18 @@ data class PriorityConfig(
 )
 
 /**
- * 优先级配置管理
+ * Priority Configs Manager
  */
 object PriorityConfigs {
     
     private val configs = mapOf(
-        0 to PriorityConfig("P0", Color(0xFFEF5350), "突发"),
-        1 to PriorityConfig("P1", Color(0xFF42A5F5), "核心"),
-        2 to PriorityConfig("P2", Color(0xFFFFCA28), "短期")
+        1 to PriorityConfig("P1", Color(0xFF42A5F5), "Core"),
+        2 to PriorityConfig("P2", Color(0xFFFFCA28), "Urgent")
     )
     
-    /**
-     * 获取优先级配置
-     */
+    // Get config
     fun get(priority: Int): PriorityConfig? {
         return configs[priority]
-    }
-    
-    /**
-     * 获取所有配置
-     */
-    fun getAll(): Map<Int, PriorityConfig> {
-        return configs
     }
 }
 

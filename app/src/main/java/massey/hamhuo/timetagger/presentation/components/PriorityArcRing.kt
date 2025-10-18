@@ -16,8 +16,7 @@ import kotlin.math.atan2
 import kotlin.math.sqrt
 
 /**
- * 优先级弧形环组件
- * 显示三个优先级区域和一个休息按钮
+ * Priority Arc Ring
  */
 @Composable
 fun PriorityArcRing(
@@ -44,10 +43,9 @@ fun PriorityArcRing(
                         if (angle < 0) angle += 360f
                         
                         when {
-                            angle >= 315f || angle < 45f -> onPriorityClick(1)  // 右侧 P1
-                            angle >= 45f && angle < 135f -> onPriorityClick(2)  // 下方 P2
-                            angle >= 135f && angle < 225f -> onRestClick()      // 左侧 休息按钮
-                            else -> onPriorityClick(0)                           // 上方 P0
+                            angle >= 330f || angle < 90f -> onPriorityClick(1)   // P1 (330° - 90°)
+                            angle >= 90f && angle < 210f -> onPriorityClick(2)   // P2 (90° - 210°)
+                            else -> onRestClick()                                  // Rest (210° - 330°)
                         }
                     }
                 }
@@ -61,44 +59,33 @@ fun PriorityArcRing(
             val topLeft = Offset(centerX - radius, centerY - radius)
             val arcSize = Size(radius * 2, radius * 2)
             
-            // P0 - 左上 (225° - 315°)
-            drawArc(
-                color = PriorityConfigs.get(0)!!.color,
-                startAngle = 225f,
-                sweepAngle = 90f,
-                useCenter = false,
-                topLeft = topLeft,
-                size = arcSize,
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-            )
-            
-            // P1 - 右上 (315° - 45°)
+            // P1 arc (330° - 90°, 120°)
             drawArc(
                 color = PriorityConfigs.get(1)!!.color,
-                startAngle = 315f,
-                sweepAngle = 90f,
+                startAngle = 330f,
+                sweepAngle = 120f,
                 useCenter = false,
                 topLeft = topLeft,
                 size = arcSize,
                 style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
             )
             
-            // P2 - 右下 (45° - 135°)
+            // P2 arc (90° - 210°, 120°)
             drawArc(
                 color = PriorityConfigs.get(2)!!.color,
-                startAngle = 45f,
-                sweepAngle = 90f,
+                startAngle = 90f,
+                sweepAngle = 120f,
                 useCenter = false,
                 topLeft = topLeft,
                 size = arcSize,
                 style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
             )
             
-            // 休息按钮 - 左下 (135° - 225°)，使用灰色
+            // Rest button (210° - 330°, 120°)
             drawArc(
                 color = androidx.compose.ui.graphics.Color(0xFF78909C),
-                startAngle = 135f,
-                sweepAngle = 90f,
+                startAngle = 210f,
+                sweepAngle = 120f,
                 useCenter = false,
                 topLeft = topLeft,
                 size = arcSize,

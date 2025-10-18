@@ -11,15 +11,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.core.content.edit
 
-/**
- * 时间追踪数据仓库
- * 
- * 存储架构：
- * 1. 主存储：SharedPreferences + JSON（轻量、快速）
- * 2. 跨进程：文件共享（Tile）+ ContentProvider（独立表盘）
- * 3. 内存缓存：减少 JSON 解析，降低 GC 压力
- */
 class TimeTrackerRepository(context: Context) {
     
     private val appContext = context.applicationContext
@@ -56,7 +49,7 @@ class TimeTrackerRepository(context: Context) {
             val task = getCurrentTask()
             CrossProcessDataReader.saveCurrentTask(appContext, task)
         } catch (e: Exception) {
-            // 忽略错误，不影响主流程
+            e.printStackTrace()
         }
     }
     
@@ -64,7 +57,7 @@ class TimeTrackerRepository(context: Context) {
      * 更新当前任务标签
      */
     fun updateCurrentTaskTag(tag: String) {
-        prefs.edit().putString("last_tag", tag).apply()
+        prefs.edit { putString("last_tag", tag) }
         syncCurrentTaskToFile()
     }
     
@@ -72,11 +65,11 @@ class TimeTrackerRepository(context: Context) {
      * 清除当前任务
      */
     fun clearCurrentTask() {
-        prefs.edit()
-            .putString("last_tag", "")
-            .putInt("last_priority", -1)
-            .putLong("current_rest_time", 0)
-            .apply()
+        prefs.edit {
+            putString("last_tag", "")
+                .putInt("last_priority", -1)
+                .putLong("current_rest_time", 0)
+        }
         syncCurrentTaskToFile()
     }
     
@@ -85,22 +78,15 @@ class TimeTrackerRepository(context: Context) {
      */
     fun addRestTimeToCurrentTask(restMillis: Long) {
         val currentRestTime = prefs.getLong("current_rest_time", 0)
-        prefs.edit().putLong("current_rest_time", currentRestTime + restMillis).apply()
+        prefs.edit { putLong("current_rest_time", currentRestTime + restMillis) }
         syncCurrentTaskToFile()
     }
-    
-    /**
-     * 获取当前任务的休息时间
-     */
-    fun getCurrentRestTime(): Long {
-        return prefs.getLong("current_rest_time", 0)
-    }
-    
+
     /**
      * 保存休息开始时间
      */
     fun setRestStartTime(timestamp: Long) {
-        prefs.edit().putLong("rest_start_time", timestamp).apply()
+        prefs.edit { putLong("rest_start_time", timestamp) }
     }
     
     /**
@@ -114,7 +100,7 @@ class TimeTrackerRepository(context: Context) {
      * 清除休息开始时间
      */
     fun clearRestStartTime() {
-        prefs.edit().putLong("rest_start_time", 0).apply()
+        prefs.edit { putLong("rest_start_time", 0) }
     }
     
     // ==================== 任务事件 ====================
@@ -133,13 +119,13 @@ class TimeTrackerRepository(context: Context) {
             .put("tag", task.tag)
             .put("priority", task.priority))
         
-        prefs.edit()
-            .putString(key, arr.toString())
-            .putString("last_tag", task.tag)
-            .putInt("last_priority", task.priority)
-            .putString("last_date", day)
-            .putLong("current_rest_time", 0)
-            .apply()
+        prefs.edit {
+            putString(key, arr.toString())
+                .putString("last_tag", task.tag)
+                .putInt("last_priority", task.priority)
+                .putString("last_date", day)
+                .putLong("current_rest_time", 0)
+        }
         
         syncCurrentTaskToFile()
         invalidateTodayRecordsCache()  // 清除缓存
@@ -169,10 +155,10 @@ class TimeTrackerRepository(context: Context) {
             .put("tag", "")
             .put("priority", -1))
         
-        prefs.edit()
-            .putString(key, arr.toString())
-            .putLong("current_rest_time", 0)
-            .apply()
+        prefs.edit {
+            putString(key, arr.toString())
+                .putLong("current_rest_time", 0)
+        }
         
         syncCurrentTaskToFile()
         invalidateTodayRecordsCache()  // 清除缓存
@@ -264,7 +250,7 @@ class TimeTrackerRepository(context: Context) {
      * 保存指定日期的事件数据
      */
     fun saveEventsForDate(date: String, events: JSONArray) {
-        prefs.edit().putString("events_$date", events.toString()).apply()
+        prefs.edit { putString("events_$date", events.toString()) }
     }
     
     // ==================== 待办队列 ====================
@@ -278,7 +264,7 @@ class TimeTrackerRepository(context: Context) {
             .put("priority", task.priority)
             .put("tag", task.tag)
             .put("addTime", task.timestamp))
-        prefs.edit().putString("pending_queue", queue.toString()).apply()
+        prefs.edit { putString("pending_queue", queue.toString()) }
         invalidatePendingTasksCache()  // 清除缓存
     }
     
@@ -331,15 +317,7 @@ class TimeTrackerRepository(context: Context) {
                 .put("tag", it.tag)
                 .put("addTime", it.addTime))
         }
-        prefs.edit().putString("pending_queue", queue.toString()).apply()
-        invalidatePendingTasksCache()  // 清除缓存
-    }
-    
-    /**
-     * 清空待办队列
-     */
-    fun clearPendingQueue() {
-        prefs.edit().putString("pending_queue", "[]").apply()
+        prefs.edit { putString("pending_queue", queue.toString()) }
         invalidatePendingTasksCache()  // 清除缓存
     }
     
@@ -356,7 +334,7 @@ class TimeTrackerRepository(context: Context) {
      * 更新最后日期
      */
     fun updateLastDate(date: String) {
-        prefs.edit().putString("last_date", date).apply()
+        prefs.edit { putString("last_date", date) }
     }
     
     /**

@@ -2,6 +2,7 @@ package massey.hamhuo.timetagger.watchface
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.net.toUri
 
 /**
  * 当前任务数据读取器
@@ -13,7 +14,7 @@ class CurrentTaskReader(private val context: Context) {
 
     companion object {
         private const val AUTHORITY = "massey.hamhuo.timetagger.provider"
-        private val CONTENT_URI = Uri.parse("content://$AUTHORITY/current_task")
+        private val CONTENT_URI = "content://$AUTHORITY/current_task".toUri()
         
         private const val COLUMN_PRIORITY = "priority"
         private const val COLUMN_TAG = "tag"

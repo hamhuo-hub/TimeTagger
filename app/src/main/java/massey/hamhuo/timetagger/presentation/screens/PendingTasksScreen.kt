@@ -30,7 +30,7 @@ import massey.hamhuo.timetagger.data.model.PendingTask
 import massey.hamhuo.timetagger.util.PriorityConfigs
 
 /**
- * 待办任务列表屏幕
+ * Pending Tasks Screen
  */
 @Composable
 fun PendingTasksScreen(
@@ -42,9 +42,9 @@ fun PendingTasksScreen(
 ) {
     BackHandler { onBack() }
     
-    // 使用refreshKey触发重组，获取最新任务列表
+    // Refresh trigger
     LaunchedEffect(refreshKey) {
-        // 刷新时无需额外操作，重组会获取最新数据
+        // Recompose for latest
     }
     
     Box(modifier = Modifier.fillMaxSize()) {
@@ -52,7 +52,7 @@ fun PendingTasksScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 36.dp)
-                .padding(top = 40.dp, bottom = 12.dp), // 为顶部按钮预留空间
+                .padding(top = 40.dp, bottom = 12.dp), // Top button space
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             item {
@@ -76,7 +76,7 @@ fun PendingTasksScreen(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() }
                         ) {
-                            // 单击选择并开始任务
+                            // Start task
                             onTaskSelected(task)
                             onBack()
                         }
@@ -100,7 +100,7 @@ fun PendingTasksScreen(
                 }
             }
             
-            // 底部格言
+            // Bottom motto
             item {
                 Spacer(Modifier.height(16.dp))
                 Text(
@@ -112,7 +112,7 @@ fun PendingTasksScreen(
             }
         }
         
-        // 顶部圆弧按钮（只绘制，不处理触摸）- 使用与主界面相同的样式
+        // Top arcs
         Canvas(modifier = Modifier.fillMaxSize()) {
             val centerX = size.width / 2f
             val centerY = size.height / 2f
@@ -121,7 +121,7 @@ fun PendingTasksScreen(
             val topLeft = Offset(centerX - radius, centerY - radius)
             val arcSize = Size(radius * 2, radius * 2)
             
-            // P2 - 左上黄色 (195° - 360°) 60度
+            // P2 arc
             drawArc(
                 color = PriorityConfigs.get(2)!!.color,
                 startAngle = -120f,
@@ -132,7 +132,7 @@ fun PendingTasksScreen(
                 style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
             )
             
-            // P1 - 右上蓝色 (360° - 345°) 60度
+            // P1 arc
             drawArc(
                 color = PriorityConfigs.get(1)!!.color,
                 startAngle = -90f,
@@ -144,7 +144,7 @@ fun PendingTasksScreen(
             )
         }
         
-        // 顶部精确匹配圆弧的可点击区域
+        // Top click areas
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -152,7 +152,7 @@ fun PendingTasksScreen(
                 .align(Alignment.TopCenter),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // 左上 P2 黄色圆弧点击区域
+            // P2 click area
             Box(
                 modifier = Modifier
                     .weight(0.2f)
@@ -163,7 +163,7 @@ fun PendingTasksScreen(
                     ) { onAddTask(2) }
             )
             
-            // 右上 P1 蓝色圆弧点击区域
+            // P1 click area
             Box(
                 modifier = Modifier
                     .weight(0.2f)

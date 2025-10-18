@@ -1,11 +1,11 @@
 package massey.hamhuo.timetagger.presentation
 
 import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
+import android.speech.RecognizerIntent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -42,9 +42,7 @@ import massey.hamhuo.timetagger.service.TimeTrackerService
 import massey.hamhuo.timetagger.util.PriorityConfigs
 
 /**
- * 重构后的MainActivity
- * 职责：Activity生命周期管理和UI组合
- * 使用后台服务管理时间追踪逻辑
+ * Main Activity
  */
 class MainActivity : ComponentActivity() {
     
@@ -68,16 +66,16 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // 启动服务
+        // Start service
         TimeTrackerService.startService(this)
         
-        // 绑定服务
+        // Bind service
         val intent = Intent(this, TimeTrackerService::class.java)
-        bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        bindService(intent, serviceConnection, BIND_AUTO_CREATE)
         
         setContent {
             MaterialTheme {
-                // 使用 StateFlow.collectAsState 监听服务状态
+                // Monitor service
                 val trackerService by serviceState.collectAsState()
                 
                 if (trackerService != null) {
@@ -86,12 +84,12 @@ class MainActivity : ComponentActivity() {
                     )
                     TimeTrackerApp(viewModel)
                 } else {
-                    // 显示加载状态
+                    // Loading
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("初始化中...")
+                        Text("Initializing...")
                     }
                 }
             }
@@ -100,12 +98,12 @@ class MainActivity : ComponentActivity() {
     
     override fun onStop() {
         super.onStop()
-        // Activity 进入后台时解绑服务，避免内存泄漏
+        // Unbind service
         if (isBound) {
             try {
                 unbindService(serviceConnection)
             } catch (e: Exception) {
-                // 忽略解绑异常
+                // Ignore exception
             }
             isBound = false
         }
@@ -113,25 +111,25 @@ class MainActivity : ComponentActivity() {
     
     override fun onStart() {
         super.onStart()
-        // Activity 回到前台时重新绑定服务
+        // Rebind service
         if (!isBound) {
             val intent = Intent(this, TimeTrackerService::class.java)
             try {
-                bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+                bindService(intent, serviceConnection, BIND_AUTO_CREATE)
             } catch (e: Exception) {
-                // 忽略绑定异常
+                // Ignore exception
             }
         }
     }
     
     override fun onDestroy() {
         super.onDestroy()
-        // 确保资源释放
+        // Release resources
         if (isBound) {
             try {
                 unbindService(serviceConnection)
             } catch (e: Exception) {
-                // 忽略解绑异常
+                // Ignore exception
             }
             isBound = false
         }
@@ -140,24 +138,21 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * 应用主入口
+ * Main App
  */
 @Composable
 private fun TimeTrackerApp(viewModel: TimeTrackerViewModel) {
     var showHistory by remember { mutableStateOf(false) }
     var showPending by remember { mutableStateOf(false) }
-    var pendingPriorityForAdd by remember { mutableStateOf(-1) }
-    var refreshTrigger by remember { mutableStateOf(0) }
+    var pendingPriorityForAdd by remember { mutableIntStateOf(-1) }
+    var refreshTrigger by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
     
-    // 语音输入管理器（用于待办界面添加任务）
-    val voiceInputManager = remember { VoiceInputManager(context) }
-    
-    // 语音输入Launcher（待办界面添加任务）
+    // Voice launcher
     val voiceLauncherForPending = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        val spoken = voiceInputManager.extractSpokenText(result)
+        val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.trim()
         if (!spoken.isNullOrEmpty() && pendingPriorityForAdd >= 0) {
             viewModel.addPendingTask(pendingPriorityForAdd, spoken)
             pendingPriorityForAdd = -1
@@ -165,7 +160,7 @@ private fun TimeTrackerApp(viewModel: TimeTrackerViewModel) {
         }
     }
     
-    // 返回处理器：确保只关闭当前屏幕
+    // Back handler
     val onBackToMain = {
         showHistory = false
         showPending = false
@@ -190,7 +185,11 @@ private fun TimeTrackerApp(viewModel: TimeTrackerViewModel) {
                 },
                 onAddTask = { priority ->
                     pendingPriorityForAdd = priority
-                    voiceInputManager.startVoiceInput(voiceLauncherForPending, isEdit = false)
+                    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                        putExtra(RecognizerIntent.EXTRA_PROMPT, "Task name")
+                    }
+                    voiceLauncherForPending.launch(intent)
                 },
                 refreshKey = refreshTrigger
             )
@@ -214,7 +213,7 @@ private fun TimeTrackerApp(viewModel: TimeTrackerViewModel) {
 }
 
 /**
- * 主屏幕
+ * Main Screen
  */
 @Composable
 private fun MainScreen(
@@ -224,23 +223,20 @@ private fun MainScreen(
 ) {
     val time by rememberTimeMinuteTicker()
     var currentTag by remember { mutableStateOf("") }
-    var currentPriority by remember { mutableStateOf(-1) }
-    var refreshTrigger by remember { mutableStateOf(0) }
-    var pendingPriority by remember { mutableStateOf(-1) }
+    var currentPriority by remember { mutableIntStateOf(-1) }
+    var refreshTrigger by remember { mutableIntStateOf(0) }
+    var pendingPriority by remember { mutableIntStateOf(-1) }
     val context = LocalContext.current
     
-    // 休息状态
+    // Rest state
     val isResting by viewModel.isResting.collectAsState()
     val restTimeLeft by viewModel.restTimeLeft.collectAsState()
     
-    // 语音输入管理器
-    val voiceInputManager = remember { VoiceInputManager(context) }
-    
-    // 建议任务状态
+    // Suggested task
     var suggestedTag by remember { mutableStateOf("") }
-    var suggestedPriority by remember { mutableStateOf(-1) }
+    var suggestedPriority by remember { mutableIntStateOf(-1) }
     
-    // 刷新当前任务状态
+    // Refresh state
     LaunchedEffect(refreshTrigger) {
         val task = viewModel.getCurrentTask()
         currentTag = task.tag
@@ -251,16 +247,11 @@ private fun MainScreen(
         suggestedPriority = suggested.priority
     }
     
-    // 待办任务数量（独立状态，避免频繁调用viewModel）
-    val pendingCount = remember(refreshTrigger) { 
-        viewModel.getPendingTaskCount() 
-    }
-    
-    // 语音输入Launcher（添加任务）
+    // Voice launcher
     val voiceLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        val spoken = voiceInputManager.extractSpokenText(result)
+        val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.trim()
         if (!spoken.isNullOrEmpty() && pendingPriority >= 0) {
             viewModel.addTask(pendingPriority, spoken)
             currentTag = spoken
@@ -271,11 +262,11 @@ private fun MainScreen(
         pendingPriority = -1
     }
     
-    // 语音输入Launcher（编辑任务）
+    // Edit launcher
     val editLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        val spoken = voiceInputManager.extractSpokenText(result)
+        val spoken = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.trim()
         if (!spoken.isNullOrEmpty()) {
             viewModel.updateCurrentTaskTag(spoken)
             currentTag = spoken
@@ -284,14 +275,18 @@ private fun MainScreen(
         }
     }
     
-    // 启动语音输入
+    // Start voice
     val startVoiceInput: (Int, Boolean) -> Unit = { priority, isEdit ->
         pendingPriority = priority
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_PROMPT, if (isEdit) "Edit task" else "Task name")
+        }
         val launcher = if (isEdit) editLauncher else voiceLauncher
-        voiceInputManager.startVoiceInput(launcher, isEdit)
+        launcher.launch(intent)
     }
     
-    // 完成任务回调
+    // Complete task
     val onCompleteTask: () -> Unit = {
         viewModel.completeTask()
         viewModel.stopTaskRest()
@@ -301,12 +296,12 @@ private fun MainScreen(
         TileUpdateManager.requestTileUpdate(context)
     }
     
-    // 停止休息回调
+    // Stop rest
     val onStopRest: () -> Unit = {
         viewModel.stopTaskRest()
     }
     
-    // 接受建议任务回调
+    // Accept suggested
     val onAcceptSuggested: () -> Unit = {
         viewModel.acceptSuggestedTask()
         refreshTrigger++
@@ -317,7 +312,7 @@ private fun MainScreen(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        // 优先级圆环（P3改为休息按钮）
+        // Priority ring
         PriorityArcRing(
             onPriorityClick = { priority -> startVoiceInput(priority, false) },
             onRestClick = {
@@ -331,7 +326,7 @@ private fun MainScreen(
             }
         )
         
-        // 中央内容区
+        // Center content
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -339,23 +334,18 @@ private fun MainScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-            // 待办按钮
-            PendingButton(
-                count = pendingCount,
-                onClick = onClickPending
-            )
+            Spacer(Modifier.height(40.dp))
             
-            Spacer(Modifier.height(16.dp))
-            
-            // 时间显示
+            // Time display
             TimeDisplay(
                 time = time,
-                onClick = onClickTime
+                onClick = onClickTime,
+                onLongPress = onClickPending
             )
             
             Spacer(Modifier.height(16.dp))
             
-            // 任务标签或建议任务或空闲图标
+            // Task display
             TaskDisplay(
                 tag = currentTag,
                 priority = currentPriority,
@@ -369,63 +359,17 @@ private fun MainScreen(
                 onAcceptSuggested = onAcceptSuggested
             )
         }
-        
-        // 顶部隐藏的点击区域，始终可以点击进入待办界面
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(40.dp)
-                .align(Alignment.TopCenter)
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() }
-                ) { onClickPending() }
-        )
     }
 }
 
 /**
- * 待办按钮组件
- */
-@Composable
-private fun PendingButton(
-    count: Int,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier.height(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        if (count > 0) {
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(Color(0x11000000))
-                    .clickable(
-                        indication = null,
-                        interactionSource = remember { MutableInteractionSource() }
-                    ) { onClick() }
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "+$count",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color(0xFF888888)
-                )
-            }
-        }
-    }
-}
-
-/**
- * 时间显示组件
+ * Time Display
  */
 @Composable
 private fun TimeDisplay(
     time: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongPress: () -> Unit = {}
 ) {
     Text(
         text = time,
@@ -434,13 +378,16 @@ private fun TimeDisplay(
         modifier = Modifier
             .padding(vertical = 4.dp)
             .pointerInput(Unit) {
-                detectTapGestures(onTap = { onClick() })
+                detectTapGestures(
+                    onTap = { onClick() },
+                    onLongPress = { onLongPress() }
+                )
             }
     )
 }
 
 /**
- * 任务显示组件
+ * Task Display
  */
 @Composable
 private fun TaskDisplay(
@@ -455,7 +402,7 @@ private fun TaskDisplay(
     onRestClick: () -> Unit = {},
     onAcceptSuggested: () -> Unit = {}
 ) {
-    var offsetX by remember { mutableStateOf(0f) }
+    var offsetX by remember { mutableFloatStateOf(0f) }
     
     Box(
         modifier = Modifier
@@ -465,30 +412,30 @@ private fun TaskDisplay(
                 detectDragGestures(
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        // 休息时不允许左滑
+                        // No swipe
                         if (isResting) return@detectDragGestures
                         
-                        // 只允许左滑
+                        // Left swipe
                         if (dragAmount.x < 0) {
                             offsetX = (offsetX + dragAmount.x).coerceAtLeast(-200f)
                         } else if (offsetX < 0) {
-                            // 右滑恢复
+                            // Right swipe
                             offsetX = (offsetX + dragAmount.x).coerceAtMost(0f)
                         }
                     },
                     onDragEnd = {
-                        // 休息时不允许完成任务
+                        // No complete
                         if (isResting) {
                             offsetX = 0f
                             return@detectDragGestures
                         }
                         
-                        // 如果左滑超过80像素，完成任务
+                        // Complete task
                         if (offsetX < -80f && tag.isNotEmpty() && priority >= 0) {
                             onComplete()
                             offsetX = 0f
                         } else {
-                            // 否则恢复原位
+                            // Reset position
                             offsetX = 0f
                         }
                     }
@@ -498,7 +445,7 @@ private fun TaskDisplay(
     ) {
         if (tag.isNotEmpty() && priority >= 0) {
             if (isResting) {
-                // 休息中：显示椭圆形倒计时器（可点击提前结束）
+                // Resting
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Top
@@ -531,7 +478,7 @@ private fun TaskDisplay(
                     }
                 }
             } else {
-                // 正常工作：显示任务标签
+                // Working
                 val config = PriorityConfigs.get(priority)
                 if (config != null) {
                     Column(
@@ -565,7 +512,7 @@ private fun TaskDisplay(
                         )
                     }
                 } else {
-                    // 优先级无效（比如旧的P3数据），只显示文字
+                    // Invalid priority
                     Text(
                         text = tag,
                         fontSize = 16.sp,
@@ -584,7 +531,7 @@ private fun TaskDisplay(
                 }
             }
         } else if (suggestedTag.isNotEmpty() && suggestedPriority >= 0) {
-            // 有建议任务：显示半透明建议，支持双击确认
+            // Suggested task
             val config = PriorityConfigs.get(suggestedPriority)
             if (config != null) {
                 Column(
@@ -594,7 +541,7 @@ private fun TaskDisplay(
                         .pointerInput(suggestedTag) {
                             detectTapGestures(
                                 onDoubleTap = {
-                                    // 双击接受建议（开始待办队列第一个任务）
+                                    // Accept suggested
                                     onAcceptSuggested()
                                 }
                             )
@@ -602,7 +549,7 @@ private fun TaskDisplay(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Top
                 ) {
-                    // 提示文字
+                    // Hint text
                     Text(
                         text = "next",
                         fontSize = 10.sp,
@@ -612,7 +559,7 @@ private fun TaskDisplay(
                     
                     Spacer(Modifier.height(4.dp))
                     
-                    // 半透明任务文字
+                    // Task text
                     Text(
                         text = suggestedTag,
                         fontSize = 16.sp,
@@ -626,7 +573,7 @@ private fun TaskDisplay(
                     
                     Spacer(Modifier.height(8.dp))
                     
-                    // 半透明优先级圆点
+                    // Priority dot
                     Box(
                         modifier = Modifier
                             .size(8.dp)
@@ -636,19 +583,19 @@ private fun TaskDisplay(
                 }
             }
         } else {
-            // 无任务：显示空闲图标（自绘制圆形对勾）
+            // Idle icon
             Box(
                 modifier = Modifier.size(32.dp),
                 contentAlignment = Alignment.Center
             ) {
-                // 外圆
+                // Outer circle
                 Box(
                     modifier = Modifier
                         .size(32.dp)
                         .clip(CircleShape)
                         .background(Color(0xFF666666))
                 )
-                // 对勾（使用白色圆形简化）
+                // Check mark
                 Box(
                     modifier = Modifier
                         .size(20.dp)

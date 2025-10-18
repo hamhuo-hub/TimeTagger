@@ -65,13 +65,13 @@ class TimeTrackerService : Service() {
         taskManager = TaskManager(repository)
         val logManager = LogManager(applicationContext, repository)
         dailyResetManager = DailyResetManager(repository, logManager)
-        alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
         vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            val vibratorManager = getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
             vibratorManager.defaultVibrator
         } else {
             @Suppress("DEPRECATION")
-            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            getSystemService(VIBRATOR_SERVICE) as Vibrator
         }
         
         // 创建通知渠道
@@ -87,7 +87,7 @@ class TimeTrackerService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, createNotification())
         }
-        
+
         // 初始化时检查日期
         dailyResetManager.checkAndResetDaily()
         
@@ -243,13 +243,7 @@ class TimeTrackerService : Service() {
     fun getTodayRecords(): List<TimeRecord> {
         return repository.getTodayRecords()
     }
-    
-    /**
-     * 获取待办任务数量
-     */
-    fun getPendingTaskCount(): Int {
-        return taskManager.getPendingTaskCount()
-    }
+
     
     /**
      * 获取建议任务（待办队列的第一个）
@@ -409,14 +403,6 @@ class TimeTrackerService : Service() {
         fun startService(context: Context) {
             val intent = Intent(context, TimeTrackerService::class.java)
             context.startForegroundService(intent)
-        }
-        
-        /**
-         * 停止服务（通常不需要调用）
-         */
-        fun stopService(context: Context) {
-            val intent = Intent(context, TimeTrackerService::class.java)
-            context.stopService(intent)
         }
     }
 }

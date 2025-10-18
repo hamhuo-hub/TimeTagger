@@ -6,7 +6,6 @@ import androidx.wear.protolayout.DimensionBuilders.dp
 import androidx.wear.protolayout.DimensionBuilders.expand
 import androidx.wear.protolayout.DimensionBuilders.sp
 import androidx.wear.protolayout.DimensionBuilders.wrap
-import androidx.wear.protolayout.LayoutElementBuilders
 import androidx.wear.protolayout.LayoutElementBuilders.*
 import androidx.wear.protolayout.ModifiersBuilders
 import androidx.wear.protolayout.ModifiersBuilders.Background
@@ -47,12 +46,12 @@ class TimeTagTileService : TileService() {
             val restTime = parts.getOrNull(2)?.toLongOrNull() ?: 0L
             
             massey.hamhuo.timetagger.data.model.CurrentTask(priority, tag, restTime)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             massey.hamhuo.timetagger.data.model.CurrentTask.empty()
         }
     }
 
-    // 优先级配置
+    // Priority config
     private data class PriorityConfig(
         val color: Int,
         val labelCn: String,
@@ -60,18 +59,17 @@ class TimeTagTileService : TileService() {
     )
 
     private val priorityConfigs = mapOf(
-        0 to PriorityConfig(0xFFEF5350.toInt(), "突发", "Important & Urgent"),
         1 to PriorityConfig(0xFF42A5F5.toInt(), "核心", "Core"),
         2 to PriorityConfig(0xFFFFCA28.toInt(), "短期", "Urgent")
     )
 
     override fun onTileRequest(requestParams: RequestBuilders.TileRequest): ListenableFuture<TileBuilders.Tile> {
         return try {
-            // 使用最简单的时间获取方式
+            // Get current time
             val cal = Calendar.getInstance()
             val timeStr = String.format("%02d:%02d", cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE))
             
-            // 直接读取文件，极速返回
+            // Get current task
             val currentTask = getCurrentTask()
             val lastTag = currentTask.tag
             val lastPriority = currentTask.priority
@@ -86,7 +84,7 @@ class TimeTagTileService : TileService() {
                         .addTimelineEntry(
                             TimelineBuilders.TimelineEntry.Builder()
                                 .setLayout(
-                                    LayoutElementBuilders.Layout.Builder()
+                                    Layout.Builder()
                                         .setRoot(root)
                                         .build()
                                 )
@@ -97,8 +95,8 @@ class TimeTagTileService : TileService() {
                 .build()
 
             Futures.immediateFuture(tile)
-        } catch (e: Exception) {
-            // 发生任何错误，立即返回最简单的Tile
+        } catch (_: Exception) {
+            // Return simple tile
             try {
                 val simpleTile = TileBuilders.Tile.Builder()
                     .setResourcesVersion(RES_VERSION)
@@ -108,7 +106,7 @@ class TimeTagTileService : TileService() {
                             .addTimelineEntry(
                                 TimelineBuilders.TimelineEntry.Builder()
                                     .setLayout(
-                                        LayoutElementBuilders.Layout.Builder()
+                                        Layout.Builder()
                                             .setRoot(createDefaultTile())
                                             .build()
                                     )
@@ -118,8 +116,8 @@ class TimeTagTileService : TileService() {
                     )
                     .build()
                 Futures.immediateFuture(simpleTile)
-            } catch (e2: Exception) {
-                // 最后的兜底
+            } catch (_: Exception) {
+                // Fallback
                 Futures.immediateFuture(TileBuilders.Tile.Builder()
                     .setResourcesVersion(RES_VERSION)
                     .build())
@@ -142,7 +140,7 @@ class TimeTagTileService : TileService() {
         }
     }
 
-    private fun tileLayout(timeStr: String, lastTag: String, priority: Int): LayoutElementBuilders.LayoutElement {
+    private fun tileLayout(timeStr: String, lastTag: String, priority: Int): LayoutElement {
         val clickable = Clickable.Builder()
             .setId("open_app")
             .setOnClick(
@@ -157,7 +155,7 @@ class TimeTagTileService : TileService() {
             )
             .build()
 
-        // 时间文本
+        // Time text
         val timeText = Text.Builder()
             .setText(timeStr)
             .setFontStyle(
@@ -177,15 +175,15 @@ class TimeTagTileService : TileService() {
             .addContent(Spacer.Builder().setHeight(dp(8f)).build())
 
         if (lastTag.isNotEmpty() && priority >= 0) {
-            // 有任务时显示优先级标签和任务名
+            // Show task
             val config = priorityConfigs[priority]
             if (config != null) {
-                // 优先级标签（带背景色的小标签）
+                // Priority label
                 val priorityLabel = createPriorityLabel(priority, config)
                 column.addContent(priorityLabel)
                 column.addContent(Spacer.Builder().setHeight(dp(6f)).build())
 
-                // 任务名称
+                // Task name
                 val taskText = Text.Builder()
                     .setText(lastTag)
                     .setMaxLines(2)
@@ -199,7 +197,7 @@ class TimeTagTileService : TileService() {
                 column.addContent(taskText)
             }
         } else {
-            // 无任务时显示提示
+            // No task
             val hintText = Text.Builder()
                 .setText("Tap to start")
                 .setFontStyle(
@@ -234,8 +232,8 @@ class TimeTagTileService : TileService() {
             .build()
     }
 
-    private fun createPriorityLabel(priority: Int, config: PriorityConfig): LayoutElementBuilders.LayoutElement {
-        // P0/P1/P2/P3 标签
+    private fun createPriorityLabel(priority: Int, config: PriorityConfig): LayoutElement {
+        // P label
         val pLabel = Text.Builder()
             .setText("P$priority")
             .setFontStyle(
@@ -247,7 +245,7 @@ class TimeTagTileService : TileService() {
             )
             .build()
 
-        // 中文描述
+        // CN label
         val cnLabel = Text.Builder()
             .setText(config.labelCn)
             .setFontStyle(
@@ -258,7 +256,7 @@ class TimeTagTileService : TileService() {
             )
             .build()
 
-        // 英文描述
+        // EN label
         val enLabel = Text.Builder()
             .setText(config.labelEn)
             .setFontStyle(
@@ -269,7 +267,7 @@ class TimeTagTileService : TileService() {
             )
             .build()
 
-        // 水平排列：P标签 + 描述文字
+        // Label row
         val labelRow = Row.Builder()
             .setWidth(wrap())
             .setHeight(wrap())
@@ -286,7 +284,7 @@ class TimeTagTileService : TileService() {
             )
             .build()
 
-        // 带圆角背景的容器
+        // Background container
         return Box.Builder()
             .setWidth(wrap())
             .setHeight(wrap())
@@ -316,7 +314,7 @@ class TimeTagTileService : TileService() {
             .build()
     }
 
-    private fun createDefaultTile(): LayoutElementBuilders.LayoutElement {
+    private fun createDefaultTile(): LayoutElement {
         val clickable = Clickable.Builder()
             .setId("open_app")
             .setOnClick(

@@ -7,10 +7,7 @@ import androidx.wear.watchface.*
 import androidx.wear.watchface.style.CurrentUserStyleRepository
 import androidx.wear.watchface.style.UserStyleSchema
 
-/**
- * 独立表盘服务
- * 完全独立的应用，通过 ContentProvider 读取主应用数据
- */
+
 class TimeTagWatchFaceService : WatchFaceService() {
 
     override suspend fun createWatchFace(

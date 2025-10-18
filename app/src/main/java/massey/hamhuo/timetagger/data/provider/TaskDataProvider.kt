@@ -6,6 +6,7 @@ import android.database.Cursor
 import android.database.MatrixCursor
 import android.net.Uri
 import massey.hamhuo.timetagger.data.storage.CrossProcessDataReader
+import androidx.core.net.toUri
 
 /**
  * ContentProvider 数据提供者
@@ -15,7 +16,7 @@ class TaskDataProvider : ContentProvider() {
 
     companion object {
         const val AUTHORITY = "massey.hamhuo.timetagger.provider"
-        val CONTENT_URI: Uri = Uri.parse("content://$AUTHORITY/current_task")
+        val CONTENT_URI: Uri = "content://$AUTHORITY/current_task".toUri()
         
         const val COLUMN_PRIORITY = "priority"
         const val COLUMN_TAG = "tag"

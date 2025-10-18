@@ -20,7 +20,7 @@ import massey.hamhuo.timetagger.util.DateFormatter
 import massey.hamhuo.timetagger.util.PriorityConfigs
 
 /**
- * 历史记录屏幕
+ * History Screen
  */
 @Composable
 fun HistoryScreen(
@@ -70,7 +70,7 @@ fun HistoryScreen(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                // 显示休息时间
+                // Rest time
                 if (record.restTime > 0) {
                     val restMinutes = (record.restTime / 1000 / 60).toInt()
                     val restSeconds = (record.restTime / 1000 % 60).toInt()
